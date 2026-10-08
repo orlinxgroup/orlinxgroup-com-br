@@ -1,0 +1,114 @@
+/**
+ * ORLINX GROUP - Design System Tokens & Surface Architecture
+ * Sistema Unificado de Variáveis CSS, Tipografia e Cores Oficiais
+ */
+
+:root {
+  /* Canvas & Cores de Fundo Espacial */
+  --orx-bg-space: #070D18;
+  --orx-surface-elevated: #0C182B;
+  --orx-surface-interactive: #13253F;
+  --orx-surface-border: #1E293B;
+  --orx-surface-border-gold: rgba(201, 161, 74, 0.35);
+
+  /* Tipografia & Hierarquia */
+  --orx-text-primary: #F8FAFC;
+  --orx-text-secondary: #CBD5E1;
+  --orx-text-muted: #64748B;
+
+  /* Cores de Destaque da Marca */
+  --orx-brand-gold: #C9A14A;
+  --orx-brand-gold-glow: rgba(201, 161, 74, 0.25);
+  --orx-brand-gold-hover: #dfb75f;
+  
+  --orx-tech-blue: #0057FF;
+  --orx-tech-blue-glow: rgba(0, 87, 255, 0.25);
+  --orx-tech-blue-hover: #2672ff;
+
+  /* Feedback Semântico */
+  --orx-semantic-success: #10B981;
+  --orx-semantic-warning: #F59E0B;
+  --orx-semantic-danger: #EF4444;
+  --orx-semantic-info: #38BDF8;
+
+  /* Raios e Sombras */
+  --orx-radius-sm: 8px;
+  --orx-radius-md: 12px;
+  --orx-radius-lg: 18px;
+  --orx-radius-xl: 24px;
+}
+
+body {
+  background-color: var(--orx-bg-space);
+  color: var(--orx-text-primary);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+
+.font-space {
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Utilitários de Superfície */
+.bg-orx-space { background-color: var(--orx-bg-space); }
+.bg-orx-elevated { background-color: var(--orx-surface-elevated); }
+.bg-orx-interactive { background-color: var(--orx-surface-interactive); }
+
+.border-orx { border-color: var(--orx-surface-border); }
+.border-orx-gold { border-color: var(--orx-brand-gold); }
+.border-orx-gold-subtle { border-color: var(--orx-surface-border-gold); }
+
+.text-orx-primary { color: var(--orx-text-primary); }
+.text-orx-secondary { color: var(--orx-text-secondary); }
+.text-orx-muted { color: var(--orx-text-muted); }
+.text-orx-gold { color: var(--orx-brand-gold); }
+.text-orx-blue { color: var(--orx-tech-blue); }
+
+/* Efeitos Visuais & Glassmorphism */
+.glass-panel {
+  background: rgba(12, 24, 43, 0.75);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--orx-surface-border);
+}
+
+.glass-panel-gold {
+  background: rgba(12, 24, 43, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--orx-surface-border-gold);
+  box-shadow: 0 0 25px rgba(201, 161, 74, 0.12);
+}
+
+.glow-gold {
+  box-shadow: 0 0 25px var(--orx-brand-gold-glow);
+}
+
+.glow-blue {
+  box-shadow: 0 0 25px var(--orx-tech-blue-glow);
+}
+
+/* Botões Oficiais */
+.btn-orx-primary {
+  background: linear-gradient(135deg, #C9A14A 0%, #A8812B 100%);
+  color: #070D18;
+  font-weight: 700;
+  transition: all 0.25s ease;
+  border: none;
+}
+.btn-orx-primary:hover {
+  background: linear-gradient(135deg, #DFB75F 0%, #C9A14A 100%);
+  box-shadow: 0 0 20px var(--orx-brand-gold-glow);
+  transform: translateY(-1px);
+}
+
+.btn-orx-secondary {
+  background: rgba(19, 37, 63, 0.8);
+  color: var(--orx-text-primary);
+  border: 1px solid var(--orx-surface-border);
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+.btn-orx-secondary:hover {
+  background: rgba(26, 50, 85, 0.9);
+  border-color: var(--orx-brand-gold);
+  color: #FFFFFF;
+}
