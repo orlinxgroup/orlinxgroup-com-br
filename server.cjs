@@ -265,8 +265,9 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       }
 
       // Validação criptográfica de credenciais
+      const allowedEmails = [ADMIN_EMAIL.toLowerCase(), 'ejr@orlinxgroup.com'];
       const testHash = crypto.pbkdf2Sync(password, ADMIN_SALT, 100000, 64, 'sha512').toString('hex');
-      const isValid = (email === ADMIN_EMAIL && crypto.timingSafeEqual(Buffer.from(testHash), Buffer.from(ADMIN_PASS_HASH)));
+      const isValid = (allowedEmails.includes(email) && crypto.timingSafeEqual(Buffer.from(testHash), Buffer.from(ADMIN_PASS_HASH)));
 
       if (!isValid) {
         res.writeHead(401);

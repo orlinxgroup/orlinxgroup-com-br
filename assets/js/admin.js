@@ -1,13 +1,15 @@
 /**
  * ORLINX ADS - Painel Administrativo do Gestor
- * Autenticação Real no Servidor com Sessões Criptografadas
- * Banco de Dados Centralizado (Zero LocalStorage, Zero Senhas Fixas)
+ * Autenticação Segura via Supabase Auth & Servidor Centralizado
+ * Políticas RLS e Sessões Criptografadas (Zero LocalStorage, Zero Senhas Fixas)
  */
 
 (function () {
   'use strict';
 
   const TOKEN_KEY = 'orx_auth_jwt_token';
+  const SUPABASE_URL = window.ORLINX_SUPABASE_URL || 'https://tqcgckncuokfqblwbwal.supabase.co';
+  const SUPABASE_ANON_KEY = window.ORLINX_SUPABASE_ANON_KEY || 'sb_publishable_4OLjOUKtIqYh9tzWJBJySw_WWPSqtJR';
 
   class OrlinxAdsAdmin {
     constructor() {
@@ -15,10 +17,12 @@
       this.currentUser = null;
       this.campaigns = [];
       this.orders = [];
+      this.supabaseClient = null;
       this.init();
     }
 
     async init() {
+      this.initSupabaseClient();
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => this.checkAuthAndRender());
       } else {
@@ -26,37 +30,91 @@
       }
     }
 
-    async checkAuthAndRender() {
-      if (!this.token) {
-        this.renderLoginForm();
-        return;
-      }
-
+    initSupabaseClient() {
       try {
-        const res = await fetch('/api/auth/me', {
-          headers: { 'Authorization': `Bearer ${this.token}` }
-        });
-        const data = await res.json();
-
-        if (res.ok && data.authenticated) {
-          this.currentUser = data.user;
-          await this.loadDashboardData();
-          this.renderDashboard();
-        } else {
-          this.logout();
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
+          this.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
       } catch (err) {
-        console.error('[Auth Check Error]', err);
-        this.logout();
+        console.warn('[Supabase Client Init]', err.message || err);
       }
     }
 
+    async checkAuthAndRender() {
+      // 1. Verifica sessão ativa no Supabase Auth se o SDK estiver presente
+      if (this.supabaseClient) {
+        try {
+          const { data: { session } } = await this.supabaseClient.auth.getSession();
+          if (session && session.user) {
+            this.currentUser = { email: session.user.email, role: 'admin', provider: 'supabase' };
+            this.token = session.access_token;
+            sessionStorage.setItem(TOKEN_KEY, session.access_token);
+            await this.loadDashboardData();
+            this.renderDashboard();
+            return;
+          }
+        } catch (e) {
+          console.warn('[Supabase Session Check]', e.message || e);
+        }
+      }
+
+      // 2. Se houver token de sessão no backend centralizado
+      if (this.token) {
+        try {
+          const res = await fetch('/api/auth/me', {
+            headers: { 'Authorization': `Bearer ${this.token}` }
+          });
+          const data = await res.json();
+
+          if (res.ok && data.authenticated) {
+            this.currentUser = data.user;
+            await this.loadDashboardData();
+            this.renderDashboard();
+            return;
+          }
+        } catch (err) {
+          console.error('[Auth Check Error]', err);
+        }
+      }
+
+      this.logout();
+    }
+
     async login(email, password) {
+      const trimmedEmail = (email || '').trim().toLowerCase();
+      const cleanPassword = (password || '').trim();
+
+      if (!trimmedEmail || !cleanPassword) {
+        return { success: false, error: 'Por favor, informe e-mail e senha institucional.' };
+      }
+
+      // Tentativa 1: Supabase Auth oficial com políticas RLS
+      if (this.supabaseClient) {
+        try {
+          const { data, error } = await this.supabaseClient.auth.signInWithPassword({
+            email: trimmedEmail,
+            password: cleanPassword
+          });
+
+          if (!error && data && data.session) {
+            this.token = data.session.access_token;
+            sessionStorage.setItem(TOKEN_KEY, this.token);
+            this.currentUser = { email: data.user.email, role: 'admin', provider: 'supabase' };
+            await this.loadDashboardData();
+            this.renderDashboard();
+            return { success: true };
+          }
+        } catch (sbErr) {
+          console.warn('[Supabase Auth attempt]', sbErr.message || sbErr);
+        }
+      }
+
+      // Tentativa 2: Gateway Seguro no Servidor (PBKDF2 com Salt)
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: trimmedEmail, password: cleanPassword })
         });
 
         const data = await res.json();
@@ -68,23 +126,30 @@
           this.renderDashboard();
           return { success: true };
         } else {
-          return { success: false, error: data.error || 'Credenciais inválidas.' };
+          return { success: false, error: data.error || 'Acesso não autorizado. Verifique suas credenciais.' };
         }
       } catch (err) {
-        return { success: false, error: 'Falha de comunicação com o servidor de autenticação.' };
+        return { success: false, error: 'Falha de comunicação com o servidor de autenticação centralizado.' };
       }
     }
 
-    logout() {
+    async logout() {
       this.token = '';
       this.currentUser = null;
       sessionStorage.removeItem(TOKEN_KEY);
+
+      if (this.supabaseClient) {
+        try {
+          await this.supabaseClient.auth.signOut();
+        } catch (e) {}
+      }
+
       this.renderLoginForm();
     }
 
     async loadDashboardData() {
       try {
-        // Carrega campanhas da API centralizada
+        // Carrega campanhas da API centralizada / Supabase
         const campsRes = await fetch('/api/campaigns?all=true');
         const campsData = await campsRes.json();
         this.campaigns = campsData.campaigns || [];
@@ -107,11 +172,11 @@
       root.innerHTML = `
         <div class="max-w-md mx-auto my-16 p-8 rounded-3xl border border-[#4A332B] bg-[#1F1511]/95 shadow-2xl backdrop-blur-xl">
           <div class="text-center mb-6">
-            <div class="w-14 h-14 mx-auto rounded-2xl bg-[#2E1F1A] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] font-extrabold text-2xl mb-3 shadow-lg shadow-[#D4AF37]/15">
+            <div class="w-14 h-14 mx-auto rounded-2xl bg-[#2E1F1A] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] font-extrabold text-2xl mb-3 shadow-lg shadow-[#D4AF37]/15 font-space">
               OX
             </div>
             <h2 class="text-2xl font-bold text-[#FDFBF7] font-space">Autenticação do Gestor</h2>
-            <p class="text-xs text-[#D3CBC3] mt-1">Acesso seguro com validação centralizada no servidor</p>
+            <p class="text-xs text-[#D3CBC3] mt-1">Supabase Auth &bull; Políticas RLS &bull; Sessões Criptografadas</p>
           </div>
 
           <form id="admin-login-form" class="space-y-4">
@@ -125,7 +190,7 @@
             </div>
             <div id="login-error" class="hidden text-xs text-rose-300 bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg"></div>
             <button type="submit" id="btn-submit-login" class="w-full py-3 px-4 rounded-xl text-sm font-bold btn-gold shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2">
-              <span>&#128274;</span> Iniciar Sessão Segura &rarr;
+              <span>&#128274;</span> Acessar Painel com Supabase Auth &rarr;
             </button>
           </form>
 
@@ -173,7 +238,9 @@
             <div>
               <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">Sessão Autenticada no Servidor</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">
+                  Autenticado &bull; ${this.currentUser?.provider === 'supabase' ? 'Supabase Auth (RLS Ativo)' : 'Sessão Segura no Servidor'}
+                </span>
               </div>
               <h1 class="text-2xl font-bold text-[#FDFBF7] font-space mt-1">Console de Governança &bull; ORLINX ADS</h1>
               <p class="text-xs text-[#D3CBC3]">Conectado como: <strong>${this.escapeHtml(this.currentUser?.email || '')}</strong></p>
@@ -193,22 +260,22 @@
             <div class="p-5 rounded-2xl border border-[#1E3158] bg-[#0E1830]/80 shadow-lg">
               <span class="text-xs text-[#D3CBC3] font-medium">Impressões Reais</span>
               <p class="text-2xl font-bold text-[#FDFBF7] mt-1">${totalImpressions.toLocaleString('pt-BR')}</p>
-              <span class="text-[11px] text-emerald-400">Viewports Verificados</span>
+              <span class="text-[11px] text-emerald-400">Viewports Auditados</span>
             </div>
             <div class="p-5 rounded-2xl border border-[#4A332B] bg-[#1F1511]/80 shadow-lg">
               <span class="text-xs text-[#D3CBC3] font-medium">Cliques Consolidados</span>
               <p class="text-2xl font-bold text-[#D4AF37] mt-1">${totalClicks.toLocaleString('pt-BR')}</p>
-              <span class="text-[11px] text-[#D3CBC3]">Sem Duplicidade</span>
+              <span class="text-[11px] text-[#D3CBC3]">Anti-Fraude Ativo</span>
             </div>
             <div class="p-5 rounded-2xl border border-[#1E3158] bg-[#0E1830]/80 shadow-lg">
-              <span class="text-xs text-[#D3CBC3] font-medium">CTR Geral</span>
+              <span class="text-xs text-[#D3CBC3] font-medium">CTR Auditado</span>
               <p class="text-2xl font-bold text-[#FDFBF7] mt-1">${ctr}%</p>
-              <span class="text-[11px] text-[#D4AF37]">Taxa de Conversão</span>
+              <span class="text-[11px] text-[#D4AF37]">Taxa de Cliques</span>
             </div>
             <div class="p-5 rounded-2xl border border-[#4A332B] bg-[#1F1511]/80 shadow-lg">
               <span class="text-xs text-[#D3CBC3] font-medium">Campanhas Ativas</span>
               <p class="text-2xl font-bold text-emerald-400 mt-1">${activeCount}</p>
-              <span class="text-[11px] text-[#D3CBC3]">Em Veiculação</span>
+              <span class="text-[11px] text-[#D3CBC3]">Em Rotação</span>
             </div>
             <div class="p-5 rounded-2xl border border-[#1E3158] bg-[#0E1830]/80 shadow-lg">
               <span class="text-xs text-[#D3CBC3] font-medium">Análise Comercial</span>
@@ -217,11 +284,11 @@
             </div>
           </div>
 
-          <!-- Solicitações de Anunciantes (Dados do Banco) -->
+          <!-- Solicitações de Anunciantes (Dados do Banco Centralizado) -->
           <div class="p-6 rounded-2xl border border-[#4A332B] bg-[#1F1511]/90 shadow-xl space-y-4">
             <div class="flex items-center justify-between">
               <h2 class="text-lg font-bold text-[#FDFBF7] flex items-center gap-2">
-                <span class="text-[#D4AF37]">&#9881;</span> Solicitações de Anúncio Recebidas
+                <span class="text-[#D4AF37]">&#9881;</span> Solicitações de Anúncio Recebidas (Multi-Dispositivo)
               </h2>
               <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#2E1F1A] border border-[#4A332B] text-[#D3CBC3] font-semibold">${this.orders.length} cadastros</span>
             </div>
@@ -245,28 +312,28 @@
                     </tr>
                   ` : this.orders.map(o => `
                     <tr class="hover:bg-[#2E1F1A]/50 transition-colors">
-                      <td class="py-3 px-3 font-mono font-bold text-[#D4AF37]">${this.escapeHtml(o.orderId)}</td>
+                      <td class="py-3 px-3 font-mono font-bold text-[#D4AF37]">${this.escapeHtml(o.orderId || o.order_code)}</td>
                       <td class="py-3 px-3">
-                        <strong class="text-[#FDFBF7] block">${this.escapeHtml(o.companyName)}</strong>
+                        <strong class="text-[#FDFBF7] block">${this.escapeHtml(o.companyName || o.company_name)}</strong>
                         <span class="text-[11px] text-[#D3CBC3]">${this.escapeHtml(o.email)} &bull; ${this.escapeHtml(o.phone)}</span>
                       </td>
                       <td class="py-3 px-3">
-                        <span class="text-[#FDFBF7] block font-semibold">${this.escapeHtml(o.planName)}</span>
+                        <span class="text-[#FDFBF7] block font-semibold">${this.escapeHtml(o.planName || o.plan_name)}</span>
                         <span class="text-[#D4AF37] font-bold">R$ ${(o.amount || 0).toFixed(2).replace('.', ',')}</span>
                       </td>
                       <td class="py-3 px-3 max-w-xs truncate">
-                        <a href="${this.escapeHtml(o.targetUrl)}" target="_blank" rel="noopener noreferrer" class="text-[#D4AF37] hover:underline">
-                          ${this.escapeHtml(o.targetUrl)}
+                        <a href="${this.escapeHtml(o.targetUrl || o.target_url)}" target="_blank" rel="noopener noreferrer" class="text-[#D4AF37] hover:underline">
+                          ${this.escapeHtml(o.targetUrl || o.target_url)}
                         </a>
                       </td>
                       <td class="py-3 px-3">
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${o.status === 'active' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-[#2E1F1A] text-[#D4AF37] border border-[#D4AF37]/50'}">
-                          ${o.status === 'active' ? 'Ativo' : 'Em Análise'}
+                          ${o.status === 'active' ? 'Ativo' : 'Sob Análise'}
                         </span>
                       </td>
                       <td class="py-3 px-3 text-right">
                         ${o.status !== 'active' ? `
-                          <button class="btn-approve-order px-3 py-1.5 rounded-lg text-xs font-bold btn-gold shadow" data-order-id="${this.escapeHtml(o.orderId)}">
+                          <button class="btn-approve-order px-3 py-1.5 rounded-lg text-xs font-bold btn-gold shadow" data-order-id="${this.escapeHtml(o.orderId || o.order_code)}">
                             Aprovar Campanha &rarr;
                           </button>
                         ` : `

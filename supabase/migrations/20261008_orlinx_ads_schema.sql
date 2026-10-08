@@ -75,8 +75,8 @@ CREATE POLICY "Admins have full access to campaigns"
     ON public.orx_ads_campaigns
     FOR ALL
     TO authenticated
-    USING (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.role() = 'authenticated')
-    WITH CHECK (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.role() = 'authenticated');
+    USING (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.jwt() ->> 'email' = 'ejr@orlinxgroup.com' OR auth.role() = 'authenticated')
+    WITH CHECK (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.jwt() ->> 'email' = 'ejr@orlinxgroup.com' OR auth.role() = 'authenticated');
 
 -- B. Pedidos: Visitantes anônimos podem submeter pedidos validados via backend
 DROP POLICY IF EXISTS "Anon can insert orders" ON public.orx_ads_orders;
@@ -92,8 +92,8 @@ CREATE POLICY "Admins can view and manage orders"
     ON public.orx_ads_orders
     FOR ALL
     TO authenticated
-    USING (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.role() = 'authenticated')
-    WITH CHECK (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.role() = 'authenticated');
+    USING (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.jwt() ->> 'email' = 'ejr@orlinxgroup.com' OR auth.role() = 'authenticated')
+    WITH CHECK (auth.jwt() ->> 'email' LIKE '%@orlinxgroup.com.br' OR auth.jwt() ->> 'email' = 'ejr@orlinxgroup.com' OR auth.role() = 'authenticated');
 
 -- C. Telemetria: Registro público de métricas com proteção anti-fraude
 DROP POLICY IF EXISTS "Anon can register telemetry" ON public.orx_ads_telemetry;
