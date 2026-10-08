@@ -1,46 +1,43 @@
 /**
- * ORLINX GROUP - Design System Tokens & Surface Architecture
- * Sistema Unificado de Variáveis CSS, Tipografia e Cores Oficiais
+ * ORLINX GROUP & ORLINX ADS - Design System Tokens
+ * Paleta Oficial: Azul-Marinho, Marrom Café, Dourado e Marfim
  */
 
 :root {
-  /* Canvas & Cores de Fundo Espacial */
-  --orx-bg-space: #070D18;
-  --orx-surface-elevated: #0C182B;
-  --orx-surface-interactive: #13253F;
-  --orx-surface-border: #1E293B;
-  --orx-surface-border-gold: rgba(201, 161, 74, 0.35);
+  /* 1. Azul-Marinho (Navy Blue) - Base Corporativa & Superfícies */
+  --orx-navy-deep: #080E1E;
+  --orx-navy-surface: #0E1830;
+  --orx-navy-card: #142244;
+  --orx-navy-border: #1E3158;
 
-  /* Tipografia & Hierarquia */
-  --orx-text-primary: #F8FAFC;
-  --orx-text-secondary: #CBD5E1;
-  --orx-text-muted: #64748B;
+  /* 2. Marrom Café (Coffee Brown) - Estrutura Quente & Elegância */
+  --orx-coffee-deep: #1F1511;
+  --orx-coffee-surface: #2E1F1A;
+  --orx-coffee-border: #4A332B;
+  --orx-coffee-hover: #3D2922;
 
-  /* Cores de Destaque da Marca */
-  --orx-brand-gold: #C9A14A;
-  --orx-brand-gold-glow: rgba(201, 161, 74, 0.25);
-  --orx-brand-gold-hover: #dfb75f;
-  
-  --orx-tech-blue: #0057FF;
-  --orx-tech-blue-glow: rgba(0, 87, 255, 0.25);
-  --orx-tech-blue-hover: #2672ff;
+  /* 3. Dourado (Gold) - Destaque, Conversão & Badges */
+  --orx-gold: #D4AF37;
+  --orx-gold-light: #E8C86A;
+  --orx-gold-dark: #A68020;
+  --orx-gold-glow: rgba(212, 175, 55, 0.28);
+  --orx-gold-border: rgba(212, 175, 55, 0.35);
 
-  /* Feedback Semântico */
-  --orx-semantic-success: #10B981;
-  --orx-semantic-warning: #F59E0B;
-  --orx-semantic-danger: #EF4444;
-  --orx-semantic-info: #38BDF8;
+  /* 4. Marfim (Ivory) - Tipografia de Alta Legibilidade & Contrastes */
+  --orx-ivory-pure: #FDFBF7;
+  --orx-ivory-soft: #F5EFEB;
+  --orx-ivory-muted: #D3CBC3;
+  --orx-ivory-subtle: rgba(253, 251, 247, 0.65);
 
-  /* Raios e Sombras */
-  --orx-radius-sm: 8px;
-  --orx-radius-md: 12px;
-  --orx-radius-lg: 18px;
-  --orx-radius-xl: 24px;
+  /* Feedback & Estados */
+  --orx-status-success: #10B981;
+  --orx-status-warning: #F59E0B;
+  --orx-status-danger: #EF4444;
 }
 
 body {
-  background-color: var(--orx-bg-space);
-  color: var(--orx-text-primary);
+  background-color: var(--orx-navy-deep);
+  color: var(--orx-ivory-soft);
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
 }
@@ -49,66 +46,63 @@ body {
   font-family: 'Space Grotesk', sans-serif;
 }
 
-/* Utilitários de Superfície */
-.bg-orx-space { background-color: var(--orx-bg-space); }
-.bg-orx-elevated { background-color: var(--orx-surface-elevated); }
-.bg-orx-interactive { background-color: var(--orx-surface-interactive); }
+/* Utilitários da Paleta */
+.bg-orx-navy { background-color: var(--orx-navy-deep); }
+.bg-orx-navy-surface { background-color: var(--orx-navy-surface); }
+.bg-orx-navy-card { background-color: var(--orx-navy-card); }
+.bg-orx-coffee { background-color: var(--orx-coffee-surface); }
+.bg-orx-ivory { background-color: var(--orx-ivory-pure); color: var(--orx-navy-deep); }
 
-.border-orx { border-color: var(--orx-surface-border); }
-.border-orx-gold { border-color: var(--orx-brand-gold); }
-.border-orx-gold-subtle { border-color: var(--orx-surface-border-gold); }
+.text-orx-ivory { color: var(--orx-ivory-pure); }
+.text-orx-ivory-muted { color: var(--orx-ivory-muted); }
+.text-orx-gold { color: var(--orx-gold); }
+.text-orx-coffee { color: var(--orx-coffee-border); }
 
-.text-orx-primary { color: var(--orx-text-primary); }
-.text-orx-secondary { color: var(--orx-text-secondary); }
-.text-orx-muted { color: var(--orx-text-muted); }
-.text-orx-gold { color: var(--orx-brand-gold); }
-.text-orx-blue { color: var(--orx-tech-blue); }
+.border-orx-navy { border-color: var(--orx-navy-border); }
+.border-orx-coffee { border-color: var(--orx-coffee-border); }
+.border-orx-gold { border-color: var(--orx-gold); }
+.border-orx-gold-subtle { border-color: var(--orx-gold-border); }
 
-/* Efeitos Visuais & Glassmorphism */
-.glass-panel {
-  background: rgba(12, 24, 43, 0.75);
+/* Painéis Glassmorphism em Azul-Marinho e Marrom Café */
+.glass-panel-navy {
+  background: rgba(14, 24, 48, 0.88);
   backdrop-filter: blur(14px);
-  border: 1px solid var(--orx-surface-border);
+  border: 1px solid var(--orx-navy-border);
 }
 
-.glass-panel-gold {
-  background: rgba(12, 24, 43, 0.85);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--orx-surface-border-gold);
-  box-shadow: 0 0 25px rgba(201, 161, 74, 0.12);
+.glass-panel-coffee {
+  background: rgba(46, 31, 26, 0.82);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--orx-coffee-border);
 }
 
-.glow-gold {
-  box-shadow: 0 0 25px var(--orx-brand-gold-glow);
+.card-gold-glow {
+  box-shadow: 0 0 25px var(--orx-gold-glow);
 }
 
-.glow-blue {
-  box-shadow: 0 0 25px var(--orx-tech-blue-glow);
-}
-
-/* Botões Oficiais */
-.btn-orx-primary {
-  background: linear-gradient(135deg, #C9A14A 0%, #A8812B 100%);
-  color: #070D18;
+/* Botões do Sistema */
+.btn-gold {
+  background: linear-gradient(135deg, #D4AF37 0%, #B89025 100%);
+  color: #080E1E;
   font-weight: 700;
   transition: all 0.25s ease;
-  border: none;
+  border: 1px solid var(--orx-gold-light);
 }
-.btn-orx-primary:hover {
-  background: linear-gradient(135deg, #DFB75F 0%, #C9A14A 100%);
-  box-shadow: 0 0 20px var(--orx-brand-gold-glow);
+.btn-gold:hover {
+  background: linear-gradient(135deg, #E8C86A 0%, #D4AF37 100%);
+  box-shadow: 0 0 22px var(--orx-gold-glow);
   transform: translateY(-1px);
 }
 
-.btn-orx-secondary {
-  background: rgba(19, 37, 63, 0.8);
-  color: var(--orx-text-primary);
-  border: 1px solid var(--orx-surface-border);
+.btn-coffee {
+  background: rgba(46, 31, 26, 0.85);
+  color: var(--orx-ivory-pure);
+  border: 1px solid var(--orx-coffee-border);
   font-weight: 600;
   transition: all 0.25s ease;
 }
-.btn-orx-secondary:hover {
-  background: rgba(26, 50, 85, 0.9);
-  border-color: var(--orx-brand-gold);
+.btn-coffee:hover {
+  background: var(--orx-coffee-hover);
+  border-color: var(--orx-gold);
   color: #FFFFFF;
 }

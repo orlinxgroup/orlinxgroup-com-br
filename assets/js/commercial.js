@@ -183,44 +183,43 @@
       const amountStr = order.amount.toFixed(2).replace('.', ',');
 
       checkoutContainer.innerHTML = `
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div class="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-lg w-full p-6 text-slate-100 shadow-2xl relative">
-            <button type="button" class="absolute top-4 right-4 text-slate-400 hover:text-white text-xl font-bold" onclick="document.getElementById('pix-checkout-modal').innerHTML=''">
+        <div class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div class="bg-[#1F1511] border-2 border-[#D4AF37] rounded-3xl max-w-lg w-full p-6 sm:p-8 text-[#FDFBF7] shadow-2xl relative">
+            <button type="button" class="absolute top-4 right-4 text-[#D3CBC3] hover:text-[#FDFBF7] text-2xl font-bold" onclick="document.getElementById('pix-checkout-modal').innerHTML=''">
               &times;
             </button>
             
             <div class="flex items-center gap-2 mb-3">
               <span class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span class="text-xs font-bold text-amber-400 uppercase tracking-wider">Pedido Gerado com Sucesso</span>
+              <span class="text-xs font-bold text-[#D4AF37] uppercase tracking-wider">Solicitação Registrada</span>
             </div>
 
-            <h3 class="text-xl font-bold text-white mb-1">Pagamento via Pix • ${order.orderId}</h3>
-            <p class="text-xs text-slate-400 mb-4">${order.planName} — Total: <strong class="text-emerald-400 text-sm">R$ ${amountStr}</strong></p>
+            <h3 class="text-xl sm:text-2xl font-bold text-[#FDFBF7] font-space mb-1">Pagamento via Pix &bull; ${order.orderId}</h3>
+            <p class="text-xs text-[#D3CBC3] mb-4">${order.planName} &bull; Total: <strong class="text-[#D4AF37] text-sm">R$ ${amountStr}</strong></p>
 
-            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center mb-4">
-              <div class="w-40 h-40 mx-auto bg-white p-2 rounded-lg flex items-center justify-center mb-3">
-                <!-- QR Code Pix Simulado com Segurança -->
-                <svg viewBox="0 0 100 100" class="w-full h-full text-slate-900">
+            <div class="bg-[#080E1E] p-4 rounded-2xl border border-[#4A332B] text-center mb-4">
+              <div class="w-36 h-36 mx-auto bg-white p-2.5 rounded-xl flex items-center justify-center mb-3">
+                <svg viewBox="0 0 100 100" class="w-full h-full text-slate-950">
                   <path fill="currentColor" d="M10 10h30v30h-30zM15 15h20v20h-20zM60 10h30v30h-30zM65 15h20v20h-20zM10 60h30v30h-30zM15 65h20v20h-20zM22 22h6v6h-6zM72 22h6v6h-6zM22 72h6v6h-6zM50 15h5v15h-5zM50 40h15v5h-15zM75 50h15v10h-15zM50 60h20v5h-20zM60 75h10v15h-10zM80 80h10v10h-10zM40 75h10v10h-10zM15 50h15v5h-15z" />
                 </svg>
               </div>
-              <p class="text-[11px] text-slate-400 mb-1">Chave Pix Oficial da Conta (E-mail):</p>
-              <div class="flex items-center justify-center gap-2 bg-slate-900 p-2 rounded border border-slate-700">
-                <code class="text-xs font-mono text-amber-300 font-bold select-all">${pixKey}</code>
-                <button type="button" class="text-xs px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600" onclick="navigator.clipboard.writeText('${pixKey}'); alert('Chave Pix copiada!');">Copiar</button>
+              <p class="text-[11px] text-[#D3CBC3] mb-1">Chave Pix Institucional (E-mail):</p>
+              <div class="flex items-center justify-center gap-2 bg-[#1F1511] p-2 rounded-lg border border-[#4A332B]">
+                <code class="text-xs font-mono text-[#D4AF37] font-bold select-all">${pixKey}</code>
+                <button type="button" class="text-xs px-2.5 py-0.5 rounded bg-[#2E1F1A] hover:bg-[#3D2922] text-[#FDFBF7] border border-[#D4AF37]/40" onclick="navigator.clipboard.writeText('${pixKey}'); alert('Chave Pix copiada com sucesso!');">Copiar</button>
               </div>
             </div>
 
-            <div class="bg-slate-950/60 p-3 rounded-lg border border-slate-800 text-xs text-slate-300 space-y-1 mb-5">
-              <p>• <strong>Identificador do Pedido:</strong> <span class="font-mono text-amber-400">${order.orderId}</span></p>
-              <p>• <strong>Ativação:</strong> O anúncio será ativado no painel ORLINX ADS em até 2 horas úteis após a confirmação do pagamento.</p>
+            <div class="bg-[#0E1830] p-3.5 rounded-xl border border-[#1E3158] text-xs text-[#D3CBC3] space-y-1 mb-5">
+              <p>&bull; <strong>Identificador do Pedido:</strong> <span class="font-mono text-[#D4AF37]">${order.orderId}</span></p>
+              <p>&bull; <strong>Ativação:</strong> O banner será ativado após conferência manual do comprovante.</p>
             </div>
 
-            <div class="flex flex-col sm:flex-row gap-2">
-              <a href="https://wa.me/${WHATSAPP_COMMERCIAL}?text=${encodeURIComponent('Olá! Enviei a solicitação de anúncio no ORLINX ADS com o pedido ' + order.orderId + ' da empresa ' + order.companyName + ' no valor de R$ ' + amountStr + '. Segue o comprovante do Pix.')}" target="_blank" rel="noopener noreferrer" class="flex-1 py-2.5 px-4 rounded-xl text-xs font-bold text-center bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950">
+            <div class="flex flex-col sm:flex-row gap-2.5">
+              <a href="https://wa.me/${WHATSAPP_COMMERCIAL}?text=${encodeURIComponent('Olá! Enviei a solicitação de anúncio no ORLINX ADS com o pedido ' + order.orderId + ' da empresa ' + order.companyName + ' no valor de R$ ' + amountStr + '. Segue o comprovante do Pix.')}" target="_blank" rel="noopener noreferrer" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold text-center bg-emerald-600 hover:bg-emerald-500 text-white transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-950">
                 Enviar Comprovante via WhatsApp &rarr;
               </a>
-              <button type="button" class="py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700" onclick="document.getElementById('pix-checkout-modal').innerHTML=''">
+              <button type="button" class="py-3 px-4 rounded-xl text-xs font-semibold btn-coffee" onclick="document.getElementById('pix-checkout-modal').innerHTML=''">
                 Fechar
               </button>
             </div>

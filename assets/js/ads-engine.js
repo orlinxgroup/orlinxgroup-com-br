@@ -1,25 +1,26 @@
 /**
  * ORLINX ADS - Advertising & Telemetry Engine
  * Rotação, Telemetria e Monitoramento de Impressões e Cliques Reais
+ * Sem anunciantes fictícios: apenas espaços institucionais oficiais e slots abertos para anunciantes.
  */
 
 (function () {
   'use strict';
 
   const STORAGE_KEY_CAMPAIGNS = 'orx_ads_campaigns';
-  const STORAGE_KEY_STATS = 'orx_ads_stats';
 
-  // Campanhas padrão de inicialização (Slots disponíveis para anunciantes)
+  // Slots e Campanhas Oficiais Iniciais
+  // 100% transparentes: chamadas institucionais próprias do portal e convites para anunciantes reais
   const DEFAULT_CAMPAIGNS = [
     {
-      id: 'orx-camp-001',
-      clientName: 'Orlinx Group Oficial',
-      title: 'Soluções Corporativas e Tecnologia Orbital',
-      category: 'Tecnologia & B2B',
+      id: 'orx-slot-topo',
+      clientName: 'Espaço Disponível • ORLINX ADS',
+      title: 'Posicione sua Empresa no Topo do Portal ORLINX GROUP',
+      category: 'Publicidade B2B',
       slot: 'top-leaderboard',
       bannerUrl: '',
       targetUrl: 'https://orlinxgroup.com.br/anuncie.html',
-      ctaText: 'Anuncie no Orlinx Ads',
+      ctaText: 'Anuncie Conosco',
       status: 'active',
       startDate: '2026-01-01',
       endDate: '2026-12-31',
@@ -27,14 +28,14 @@
       clicks: 0
     },
     {
-      id: 'orx-camp-002',
-      clientName: 'Espaço Disponível',
-      title: 'Destaque sua Empresa para Executivos e Tomadores de Decisão',
-      category: 'Empresarial',
+      id: 'orx-slot-lateral',
+      clientName: 'Vitrine de Anunciantes • ORLINX ADS',
+      title: 'Destaque seus Serviços Corporativos para Líderes e Empresas',
+      category: 'Publicidade B2B',
       slot: 'sidebar-box',
       bannerUrl: '',
       targetUrl: 'https://orlinxgroup.com.br/anuncie.html',
-      ctaText: 'Garantir este Espaço',
+      ctaText: 'Ver Planos & Preços',
       status: 'active',
       startDate: '2026-01-01',
       endDate: '2026-12-31',
@@ -42,14 +43,14 @@
       clicks: 0
     },
     {
-      id: 'orx-camp-003',
-      clientName: 'Orlinx Intelligence',
-      title: 'Plataforma Orlinx Ads: Visibilidade com Alta Conversão',
-      category: 'Marketing Digital',
+      id: 'orx-slot-feed',
+      clientName: 'ORLINX GROUP Institucional',
+      title: 'Soluções Empresariais, Infraestrutura e Consultoria Estratégica',
+      category: 'Institucional',
       slot: 'feed-billboard',
       bannerUrl: '',
       targetUrl: 'https://orlinxgroup.com.br/anuncie.html',
-      ctaText: 'Conhecer Planos',
+      ctaText: 'Conhecer a Rede',
       status: 'active',
       startDate: '2026-01-01',
       endDate: '2026-12-31',
@@ -62,7 +63,6 @@
     constructor() {
       this.campaigns = this.loadCampaigns();
       this.observedSlots = new Set();
-      this.clickedInSession = new Set();
       this.init();
     }
 
@@ -72,9 +72,7 @@
         if (stored) {
           return JSON.parse(stored);
         }
-      } catch (e) {
-        console.warn('[Orlinx Ads] LocalStorage indisponível, usando fallback em memória.');
-      }
+      } catch (e) {}
       this.saveCampaigns(DEFAULT_CAMPAIGNS);
       return DEFAULT_CAMPAIGNS;
     }
@@ -104,7 +102,6 @@
             const slotName = el.getAttribute('data-orx-slot');
             const campaignId = el.getAttribute('data-orx-campaign-id');
             
-            // Registra impressão real apenas se ainda não contabilizada nesta exibição
             if (campaignId && !this.observedSlots.has(slotName + ':' + campaignId)) {
               this.observedSlots.add(slotName + ':' + campaignId);
               this.recordImpression(campaignId);
@@ -126,7 +123,6 @@
     getCampaignForSlot(slotName) {
       const active = this.campaigns.filter(c => c.slot === slotName && c.status === 'active');
       if (active.length > 0) {
-        // Rotação simples ou primeiro ativo
         const randomIndex = Math.floor(Math.random() * active.length);
         return active[randomIndex];
       }
@@ -135,12 +131,11 @@
 
     renderBanner(container, campaign, slotName) {
       if (!campaign) {
-        // Fallback institucional oficial
         container.innerHTML = `
-          <div class="orx-ad-banner default-banner p-4 rounded-xl border border-dashed border-slate-700 bg-slate-900/60 text-center flex flex-col items-center justify-center">
-            <span class="text-xs uppercase tracking-wider text-amber-500 font-semibold mb-1">Espaço Publicitário Disponível</span>
-            <p class="text-sm text-slate-300 font-medium mb-2">Conecte sua marca a milhares de empresas e parceiros.</p>
-            <a href="/anuncie.html" class="inline-block text-xs font-bold text-amber-400 hover:text-amber-300 underline">Reserve este banner no ORLINX ADS &rarr;</a>
+          <div class="p-4 rounded-xl border border-dashed border-[#4A332B] bg-[#1F1511]/90 text-center flex flex-col items-center justify-center">
+            <span class="text-[11px] uppercase tracking-wider text-[#D4AF37] font-semibold mb-1">Espaço Publicitário Aberto</span>
+            <p class="text-xs text-[#F5EFEB] mb-2 font-medium">Divulgue seus serviços no ORLINX ADS.</p>
+            <a href="/anuncie.html" class="text-xs font-bold text-[#D4AF37] hover:underline">Ver Tabela de Formatos &rarr;</a>
           </div>
         `;
         return;
@@ -149,11 +144,13 @@
       container.setAttribute('data-orx-campaign-id', campaign.id);
 
       if (campaign.bannerUrl) {
-        // Banner gráfico do anunciante
+        // Banner carregado do anunciante real
         container.innerHTML = `
-          <div class="orx-ad-container relative group overflow-hidden rounded-xl border border-slate-800 bg-slate-950/80 shadow-lg">
+          <div class="relative group overflow-hidden rounded-xl border border-[#4A332B] bg-[#0E1830] shadow-lg">
             <div class="absolute top-2 right-2 z-10">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/75 text-amber-400 border border-amber-500/30 backdrop-blur-sm">Publicidade • Orlinx Ads</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#080E1E]/85 text-[#D4AF37] border border-[#D4AF37]/40 backdrop-blur-sm">
+                Publicidade &bull; ORLINX ADS
+              </span>
             </div>
             <a href="${campaign.targetUrl}" target="_blank" rel="noopener noreferrer" class="orx-ad-link block" data-campaign-id="${campaign.id}">
               <img src="${campaign.bannerUrl}" alt="${campaign.title}" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]" loading="lazy">
@@ -161,32 +158,31 @@
           </div>
         `;
       } else {
-        // Banner temático nativo integrado com o visual Orlinx Group
+        // Banner temático nativo integrado com a paleta oficial
         container.innerHTML = `
-          <div class="orx-ad-native p-5 rounded-xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-800 text-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+          <div class="p-4 sm:p-5 rounded-xl border border-[#4A332B] bg-gradient-to-r from-[#1F1511] via-[#2E1F1A] to-[#0E1830] text-[#FDFBF7] flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
             <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold text-lg">
+              <div class="w-10 h-10 rounded-lg bg-[#2E1F1A] border border-[#D4AF37]/50 flex items-center justify-center text-[#D4AF37] font-bold text-sm shrink-0">
                 OX
               </div>
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Anúncio Verificado</span>
-                  <span class="text-xs text-slate-400">${campaign.clientName}</span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30">Espaço Disponível</span>
+                  <span class="text-xs text-[#D3CBC3]">${campaign.clientName}</span>
                 </div>
-                <h4 class="text-sm md:text-base font-bold text-white mt-0.5">${campaign.title}</h4>
+                <h4 class="text-sm font-bold text-[#FDFBF7] mt-0.5">${campaign.title}</h4>
               </div>
             </div>
-            <a href="${campaign.targetUrl}" class="orx-ad-link shrink-0 px-4 py-2 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 transition-all shadow-md hover:shadow-amber-500/20" data-campaign-id="${campaign.id}">
+            <a href="${campaign.targetUrl}" class="orx-ad-link shrink-0 px-4 py-2 rounded-lg text-xs font-bold btn-gold shadow-md text-center" data-campaign-id="${campaign.id}">
               ${campaign.ctaText || 'Saiba Mais'} &rarr;
             </a>
           </div>
         `;
       }
 
-      // Adiciona listener de clique com proteção anti-fraude
       const link = container.querySelector('.orx-ad-link');
       if (link) {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', () => {
           this.recordClick(campaign.id);
         });
       }
@@ -202,13 +198,10 @@
     }
 
     recordClick(campaignId) {
-      // Previne cliques inflacionados em loop na mesma sessão de navegação
-      const clickKey = campaignId + '_' + Date.now();
       const lastClick = sessionStorage.getItem('last_click_' + campaignId);
       const now = Date.now();
 
       if (lastClick && (now - parseInt(lastClick, 10)) < 3000) {
-        // Ignora cliques duplos em menos de 3 segundos
         return;
       }
       sessionStorage.setItem('last_click_' + campaignId, now.toString());
@@ -228,6 +221,5 @@
     }
   }
 
-  // Instancia global
   window.OrlinxAds = new OrlinxAdsEngine();
 })();
