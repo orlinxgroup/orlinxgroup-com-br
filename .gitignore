@@ -30,3 +30,7 @@ data/
 # Editor
 .vscode/
 .idea/
+
+# Backups & Deployment Archives
+backups/
+*.zip
