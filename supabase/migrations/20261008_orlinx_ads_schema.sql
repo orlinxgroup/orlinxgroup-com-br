@@ -20,22 +20,30 @@ CREATE TABLE IF NOT EXISTS public.orx_admins (
 );
 
 -- 2. Função de Verificação Administrativa com Prevenção de Recursão RLS
--- Executada como SECURITY DEFINER com search_path restrito para evitar recursão
-CREATE OR REPLACE FUNCTION public.is_admin(p_user_id UUID DEFAULT auth.uid())
+-- Executada como SECURITY DEFINER com search_path restrito (public, auth, pg_temp)
+-- Sem parâmetros para impedir consulta ou sondagem de privilégios de terceiros (avalia estritamente auth.uid())
+CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
-SET search_path = public
+SET search_path = public, auth, pg_temp
 AS $$
     SELECT EXISTS (
         SELECT 1
         FROM public.orx_admins
-        WHERE user_id = p_user_id
+        WHERE user_id = auth.uid()
           AND is_active = true
           AND role = 'admin'
     );
 $$;
+
+-- Restrição estrita de permissões de execução (EXECUTE)
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO service_role;
+
 
 -- 3. Tabela de Pedidos Comerciais de Anunciantes (orx_ads_orders)
 CREATE TABLE IF NOT EXISTS public.orx_ads_orders (

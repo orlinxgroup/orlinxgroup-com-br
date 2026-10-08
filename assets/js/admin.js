@@ -194,8 +194,10 @@
 
     async loadDashboardData() {
       try {
-        // Carrega campanhas da API centralizada / Supabase
-        const campsRes = await fetch('/api/campaigns?all=true');
+        // Carrega campanhas da API centralizada / Supabase com autenticação administrativa
+        const campsRes = await fetch('/api/campaigns?all=true', {
+          headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+        });
         const campsData = await campsRes.json();
         this.campaigns = campsData.campaigns || [];
 

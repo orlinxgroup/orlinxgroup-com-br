@@ -83,10 +83,32 @@ function isValidHttpUrl(string) {
 // Helpers de Comunicação com a API REST do Supabase Oficial
 async function supabaseFetch(endpoint, options = {}) {
   const url = `${SUPABASE_URL}${endpoint}`;
-  const apiKey = options.useServiceRole ? (SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY) : SUPABASE_ANON_KEY;
+
+  // Se a operação for privilegiada, exige estritamente SUPABASE_SERVICE_ROLE_KEY (sem fallback para anon key)
+  if (options.useServiceRole) {
+    if (!SUPABASE_SERVICE_ROLE_KEY) {
+      console.error('[Segurança Safe-Fail] Operação privilegiada abortada: SUPABASE_SERVICE_ROLE_KEY ausente.');
+      return {
+        status: 500,
+        ok: false,
+        error: 'Configuração obrigatória ausente: SUPABASE_SERVICE_ROLE_KEY não configurada no servidor.'
+      };
+    }
+  }
+
+  const apiKey = options.useServiceRole ? SUPABASE_SERVICE_ROLE_KEY : SUPABASE_ANON_KEY;
+
+  // Falha de forma segura se nenhuma credencial estiver disponível e não houver header Authorization
+  if (!apiKey && !options.headers?.Authorization) {
+    return {
+      status: 500,
+      ok: false,
+      error: 'Configuração obrigatória ausente: Nenhuma credencial do Supabase configurada.'
+    };
+  }
 
   const headers = {
-    'apikey': apiKey,
+    'apikey': apiKey || SUPABASE_ANON_KEY,
     'Content-Type': 'application/json',
     ...(options.headers || {})
   };
@@ -132,15 +154,29 @@ async function verifySupabaseToken(token) {
 // Verificação de Perfil de Administrador em orx_admins
 async function isUserAdmin(userId, userToken) {
   if (!userId) return false;
-  // Consulta a tabela orx_admins no Supabase
-  const res = await supabaseFetch(`/rest/v1/orx_admins?user_id=eq.${userId}&role=eq.admin&is_active=eq.true`, {
-    headers: userToken ? { 'Authorization': `Bearer ${userToken}` } : {},
-    useServiceRole: true
-  });
 
-  if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
-    return true;
+  // 1. Se a chave privilegiada de serviço estiver configurada, valida via service_role
+  if (SUPABASE_SERVICE_ROLE_KEY) {
+    const res = await supabaseFetch(`/rest/v1/orx_admins?user_id=eq.${userId}&role=eq.admin&is_active=eq.true`, {
+      useServiceRole: true
+    });
+    return res.ok && Array.isArray(res.data) && res.data.length > 0;
   }
+
+  // 2. Se a chave de serviço não estiver no servidor local, mas houver token autenticado do usuário:
+  // Consulta a tabela orx_admins com o token do próprio usuário, respeitando a política RLS
+  // (a política RLS invoca public.is_admin(), que verifica se auth.uid() é admin ativo).
+  if (userToken && SUPABASE_ANON_KEY) {
+    const res = await supabaseFetch(`/rest/v1/orx_admins?user_id=eq.${userId}&role=eq.admin&is_active=eq.true`, {
+      headers: {
+        'Authorization': `Bearer ${userToken}`,
+        'apikey': SUPABASE_ANON_KEY
+      }
+    });
+    return res.ok && Array.isArray(res.data) && res.data.length > 0;
+  }
+
+  // 3. Falha segura se nenhuma credencial estiver disponível
   return false;
 }
 
@@ -312,9 +348,39 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       return;
     }
 
-    // --- 4. Campanhas Públicas (/api/campaigns) ---
+    // --- 4. Campanhas Públicas e Administrativas (/api/campaigns) ---
     if (pathname === '/api/campaigns' && req.method === 'GET') {
-      // Consulta campanhas ativas no Supabase oficial
+      const isAllRequested = parsedUrl.searchParams.get('all') === 'true';
+
+      // Se for solicitada a listagem de todas as campanhas (gestão), exige autenticação administrativa
+      if (isAllRequested) {
+        const authHeader = req.headers['authorization'] || '';
+        const token = authHeader.replace(/^Bearer\s+/i, '');
+        const user = await verifySupabaseToken(token);
+
+        if (!user) {
+          res.writeHead(401);
+          res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação Supabase necessária para listar todas as campanhas.' }));
+          return;
+        }
+
+        const adminVerified = await isUserAdmin(user.id, token);
+        if (!adminVerified) {
+          res.writeHead(403);
+          res.end(JSON.stringify({ error: 'Acesso negado: Usuário sem privilégios administrativos em orx_admins.' }));
+          return;
+        }
+
+        const sbRes = await supabaseFetch('/rest/v1/orx_ads_campaigns?select=*', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const campaigns = (sbRes.ok && Array.isArray(sbRes.data)) ? sbRes.data : DEFAULT_INSTITUTIONAL_CAMPAIGNS;
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: true, campaigns }));
+        return;
+      }
+
+      // Consulta pública: somente campanhas ativas no Supabase oficial
       const sbRes = await supabaseFetch('/rest/v1/orx_ads_campaigns?status=eq.active&select=*');
       let campaigns = [];
 
@@ -415,13 +481,24 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         body: newOrderPayload
       });
 
+      // Falha Segura: Se o Supabase não persistir os dados, responde com erro 5xx e NÃO emite confirmação de pedido
+      if (!sbInsert.ok) {
+        console.error('[Falha de Persistência Supabase]', sbInsert.status, sbInsert.error || sbInsert.data);
+        res.writeHead(500);
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Falha na persistência centralizada do pedido no Supabase. O pedido não foi protocolado.'
+        }));
+        return;
+      }
+
       res.writeHead(201);
       res.end(JSON.stringify({
         success: true,
         orderId: orderCode,
         order_code: orderCode,
         status: 'pending_review',
-        persisted: sbInsert.ok,
+        persisted: true,
         message: 'Solicitação protocolada com sucesso. Os dados comerciais e faturamento serão processados após homologação oficial da campanha.'
       }));
       return;
@@ -459,7 +536,7 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       return;
     }
 
-    // --- 7. Pedidos: Aprovação de Campanha (/api/orders/approve) ---
+    // --- 7. Pedidos: Aprovação de Campanha (/api/orders/approve - POST) ---
     if (pathname === '/api/orders/approve' && req.method === 'POST') {
       const authHeader = req.headers['authorization'] || '';
       const token = authHeader.replace(/^Bearer\s+/i, '');
@@ -511,6 +588,50 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         success: true,
         campaign: (campRes.data && campRes.data[0]) || newCampaign
       }));
+      return;
+    }
+
+    // --- 7b. Campanhas: Alternar Status Ativo/Pausado (/api/campaigns/toggle - POST) ---
+    if (pathname === '/api/campaigns/toggle' && req.method === 'POST') {
+      const authHeader = req.headers['authorization'] || '';
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+      const user = await verifySupabaseToken(token);
+
+      if (!user) {
+        res.writeHead(401);
+        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação Supabase necessária.' }));
+        return;
+      }
+
+      const adminVerified = await isUserAdmin(user.id, token);
+      if (!adminVerified) {
+        res.writeHead(403);
+        res.end(JSON.stringify({ error: 'Acesso negado: Usuário sem permissões em orx_admins.' }));
+        return;
+      }
+
+      const campId = jsonBody.id;
+      if (!campId) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: 'Identificador da campanha obrigatório.' }));
+        return;
+      }
+
+      // Consulta status atual
+      const curRes = await supabaseFetch(`/rest/v1/orx_ads_campaigns?id=eq.${campId}&select=status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const curStatus = (curRes.ok && curRes.data?.[0]?.status) || 'active';
+      const newStatus = curStatus === 'active' ? 'paused' : 'active';
+
+      await supabaseFetch(`/rest/v1/orx_ads_campaigns?id=eq.${campId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: { status: newStatus }
+      });
+
+      res.writeHead(200);
+      res.end(JSON.stringify({ success: true, status: newStatus }));
       return;
     }
 
