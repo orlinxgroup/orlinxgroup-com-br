@@ -1,6 +1,9 @@
 /**
  * ORLINX GROUP & ORLINX ADS - Servidor Backend & Gateway de API
- * Autenticação Segura, Sessões Criptografadas, Validação Rigorosa de Uploads e Integração com Banco Centralizado
+ * Integração Oficial Exclusiva com Supabase: ulajrvkaqqedwuaiaksp
+ * (https://ulajrvkaqqedwuaiaksp.supabase.co)
+ * Zero Senhas Padrão | Zero JSON Local (data/ads_database.json)
+ * Autenticação Real com Supabase Auth e Verificação na Tabela orx_admins
  */
 
 const http = require('http');
@@ -11,142 +14,47 @@ const crypto = require('crypto');
 const PORT = process.env.PORT || 3000;
 const ROOT = __dirname;
 
-// Configurações do Servidor
-// Segredo HMAC do servidor para emissão de sessões seguras (persistente na execução)
-const SERVER_SESSION_SECRET = process.env.ORLINX_SESSION_SECRET || crypto.randomBytes(32).toString('hex');
+// Configurações do Projeto Supabase Oficial
+const SUPABASE_URL = process.env.SUPABASE_URL || 'https://ulajrvkaqqedwuaiaksp.supabase.co';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
-// Credenciais Administrativas do Servidor (Protegidas no ambiente, nunca no cliente)
-const ADMIN_EMAIL = process.env.ORLINX_ADMIN_EMAIL || 'admin@orlinxgroup.com.br';
-// Hash PBKDF2 da senha de governança (senha administrativa configurável via variável de ambiente)
-// Padrão de desenvolvimento local: definida com salt seguro
-const ADMIN_SALT = process.env.ORLINX_ADMIN_SALT || 'orlinx_secure_salt_2026';
-const ADMIN_PASS_HASH = crypto.pbkdf2Sync(
-  process.env.ORLINX_ADMIN_PASSWORD || 'OrlinxGov@2026#Secure',
-  ADMIN_SALT,
-  100000,
-  64,
-  'sha512'
-).toString('hex');
-
-// Banco de dados centralizado / persistente em sandbox (espelho local do schema Supabase)
-const DB_FILE = path.join(ROOT, 'data', 'ads_database.json');
-function initDatabase() {
-  const dir = path.dirname(DB_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(DB_FILE)) {
-    const initialData = {
-      campaigns: [
-        {
-          id: 'orx-slot-topo',
-          campaign_code: 'CAMP-001',
-          client_name: 'Espaço Disponível • ORLINX ADS',
-          title: 'Posicione sua Empresa no Topo do Portal ORLINX GROUP',
-          slot: 'top-leaderboard',
-          banner_url: '',
-          target_url: 'https://orlinxgroup.com.br/anuncie.html',
-          cta_text: 'Anuncie Conosco',
-          status: 'active',
-          start_date: '2026-01-01',
-          end_date: '2026-12-31',
-          impressions: 0,
-          clicks: 0
-        },
-        {
-          id: 'orx-slot-feed',
-          campaign_code: 'CAMP-002',
-          client_name: 'ORLINX GROUP Institucional',
-          title: 'Infraestrutura Corporativa, Consultoria Estratégica e Tecnologia Orbital',
-          slot: 'feed-billboard',
-          banner_url: '',
-          target_url: 'https://orlinxgroup.com.br/anuncie.html',
-          cta_text: 'Conhecer a Rede',
-          status: 'active',
-          start_date: '2026-01-01',
-          end_date: '2026-12-31',
-          impressions: 0,
-          clicks: 0
-        },
-        {
-          id: 'orx-slot-lateral',
-          campaign_code: 'CAMP-003',
-          client_name: 'Vitrine de Anunciantes • ORLINX ADS',
-          title: 'Destaque seus Serviços B2B para Empresas e Decisores',
-          slot: 'sidebar-box',
-          banner_url: '',
-          target_url: 'https://orlinxgroup.com.br/anuncie.html',
-          cta_text: 'Ver Formatos',
-          status: 'active',
-          start_date: '2026-01-01',
-          end_date: '2026-12-31',
-          impressions: 0,
-          clicks: 0
-        }
-      ],
-      orders: [],
-      telemetry: []
-    };
-    fs.writeFileSync(DB_FILE, JSON.stringify(initialData, null, 2), 'utf8');
+// Fallback institucional oficial em memória (utilizado apenas se o banco ainda não tiver migração executada)
+const DEFAULT_INSTITUTIONAL_CAMPAIGNS = [
+  {
+    id: 'orx-slot-topo',
+    campaign_code: 'CAMP-001',
+    client_name: 'Espaço Disponível • ORLINX ADS',
+    title: 'Posicione sua Empresa no Topo do Portal ORLINX GROUP',
+    slot: 'top-leaderboard',
+    banner_url: '',
+    target_url: '/anuncie.html',
+    cta_text: 'Anuncie Conosco',
+    status: 'active'
+  },
+  {
+    id: 'orx-slot-feed',
+    campaign_code: 'CAMP-002',
+    client_name: 'ORLINX GROUP Institucional',
+    title: 'Infraestrutura Corporativa, Consultoria Estratégica e Tecnologia Orbital',
+    slot: 'feed-billboard',
+    banner_url: '',
+    target_url: '/anuncie.html',
+    cta_text: 'Conhecer a Rede',
+    status: 'active'
+  },
+  {
+    id: 'orx-slot-lateral',
+    campaign_code: 'CAMP-003',
+    client_name: 'Vitrine de Anunciantes • ORLINX ADS',
+    title: 'Destaque seus Serviços B2B para Empresas e Decisores',
+    slot: 'sidebar-box',
+    banner_url: '',
+    target_url: '/anuncie.html',
+    cta_text: 'Ver Formatos',
+    status: 'active'
   }
-}
-initDatabase();
-
-function readDatabase() {
-  try {
-    return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
-  } catch (e) {
-    return { campaigns: [], orders: [], telemetry: [] };
-  }
-}
-
-function writeDatabase(data) {
-  try {
-    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    console.error('[DB Write Error]', e);
-  }
-}
-
-// Funções de Autenticação Segura
-function generateSessionToken(email) {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({
-    sub: email,
-    role: 'admin',
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24h de validade
-  })).toString('base64url');
-
-  const signature = crypto.createHmac('sha256', SERVER_SESSION_SECRET)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-
-  return `${header}.${payload}.${signature}`;
-}
-
-function verifySessionToken(token) {
-  if (!token || typeof token !== 'string') return null;
-  const parts = token.split('.');
-  if (parts.length !== 3) return null;
-
-  const [header, payload, signature] = parts;
-  const expectedSignature = crypto.createHmac('sha256', SERVER_SESSION_SECRET)
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-
-  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) {
-    return null;
-  }
-
-  try {
-    const data = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    if (data.exp && data.exp < Math.floor(Date.now() / 1000)) {
-      return null; // Expirado
-    }
-    return data;
-  } catch (e) {
-    return null;
-  }
-}
+];
 
 // Sanitização contra XSS e Validações
 function sanitizeString(str) {
@@ -172,6 +80,70 @@ function isValidHttpUrl(string) {
   }
 }
 
+// Helpers de Comunicação com a API REST do Supabase Oficial
+async function supabaseFetch(endpoint, options = {}) {
+  const url = `${SUPABASE_URL}${endpoint}`;
+  const apiKey = options.useServiceRole ? (SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY) : SUPABASE_ANON_KEY;
+
+  const headers = {
+    'apikey': apiKey,
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  };
+
+  if (!headers['Authorization'] && apiKey) {
+    headers['Authorization'] = `Bearer ${apiKey}`;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (_) {
+      data = text;
+    }
+
+    return { status: res.status, ok: res.ok, data };
+  } catch (err) {
+    return { status: 500, ok: false, error: err.message };
+  }
+}
+
+// Validação de Sessão com Supabase Auth
+async function verifySupabaseToken(token) {
+  if (!token) return null;
+  const res = await supabaseFetch('/auth/v1/user', {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (res.ok && res.data && res.data.id) {
+    return res.data;
+  }
+  return null;
+}
+
+// Verificação de Perfil de Administrador em orx_admins
+async function isUserAdmin(userId, userToken) {
+  if (!userId) return false;
+  // Consulta a tabela orx_admins no Supabase
+  const res = await supabaseFetch(`/rest/v1/orx_admins?user_id=eq.${userId}&role=eq.admin&is_active=eq.true`, {
+    headers: userToken ? { 'Authorization': `Bearer ${userToken}` } : {},
+    useServiceRole: true
+  });
+
+  if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+    return true;
+  }
+  return false;
+}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -186,7 +158,7 @@ const MIME_TYPES = {
   '.txt': 'text/plain; charset=utf-8'
 };
 
-// Manipulador de Requisições HTTP
+// Servidor HTTP
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
@@ -230,18 +202,17 @@ const server = http.createServer((req, res) => {
 function handleApiRoute(req, res, pathname, parsedUrl) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
-  // Coleta do Body JSON
   let body = '';
   req.on('data', chunk => {
     body += chunk;
-    if (body.length > 5 * 1024 * 1024) { // Limite de 5MB
-      res.writeHead(413, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Payload muito grande.' }));
+    if (body.length > 5 * 1024 * 1024) { // Limite máximo de 5MB
+      res.writeHead(413);
+      res.end(JSON.stringify({ error: 'Payload excede o limite permitido.' }));
       req.destroy();
     }
   });
 
-  req.on('end', () => {
+  req.on('end', async () => {
     let jsonBody = {};
     if (body) {
       try {
@@ -253,97 +224,113 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       }
     }
 
-    // --- 1. Autenticação: Login ---
+    // --- 1. Configuração Pública do Supabase (/api/config) ---
+    // Retorna exclusivamente a URL e a Anon Key pública para inicialização no navegador
+    // Chave service_role NUNCA é enviada ao cliente
+    if (pathname === '/api/config' && req.method === 'GET') {
+      res.writeHead(200);
+      res.end(JSON.stringify({
+        supabaseUrl: SUPABASE_URL,
+        supabaseAnonKey: SUPABASE_ANON_KEY
+      }));
+      return;
+    }
+
+    // --- 2. Autenticação Segura via Supabase Auth (/api/auth/login) ---
     if (pathname === '/api/auth/login' && req.method === 'POST') {
       const email = (jsonBody.email || '').trim().toLowerCase();
       const password = (jsonBody.password || '').trim();
 
       if (!email || !password) {
         res.writeHead(400);
-        res.end(JSON.stringify({ error: 'E-mail e senha são obrigatórios.' }));
+        res.end(JSON.stringify({ success: false, error: 'E-mail e senha são obrigatórios.' }));
         return;
       }
 
-      // Validação criptográfica de credenciais
-      const allowedEmails = [ADMIN_EMAIL.toLowerCase(), 'ejr@orlinxgroup.com'];
-      const testHash = crypto.pbkdf2Sync(password, ADMIN_SALT, 100000, 64, 'sha512').toString('hex');
-      const isValid = (allowedEmails.includes(email) && crypto.timingSafeEqual(Buffer.from(testHash), Buffer.from(ADMIN_PASS_HASH)));
+      // 1. Chama Supabase GoTrue Auth no projeto ulajrvkaqqedwuaiaksp
+      const authRes = await supabaseFetch('/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        body: { email, password }
+      });
 
-      if (!isValid) {
+      if (!authRes.ok || !authRes.data || !authRes.data.access_token) {
         res.writeHead(401);
-        res.end(JSON.stringify({ success: false, error: 'Credenciais inválidas ou acesso não autorizado.' }));
+        res.end(JSON.stringify({
+          success: false,
+          error: (authRes.data && authRes.data.error_description) || 'Credenciais inválidas no Supabase Auth.'
+        }));
         return;
       }
 
-      const token = generateSessionToken(email);
+      const user = authRes.data.user;
+      const token = authRes.data.access_token;
+
+      // 2. Validação rigorosa na tabela orx_admins (Sem conceder acesso a qualquer usuário autenticado)
+      const adminVerified = await isUserAdmin(user.id, token);
+      if (!adminVerified) {
+        res.writeHead(403);
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Acesso negado: Usuário autenticado, mas não cadastrado como administrador em orx_admins.'
+        }));
+        return;
+      }
+
       res.writeHead(200);
       res.end(JSON.stringify({
         success: true,
         token,
-        user: { email, role: 'admin' }
+        user: { id: user.id, email: user.email, role: 'admin' }
       }));
       return;
     }
 
-    // --- 2. Autenticação: Validação de Sessão Atual (/api/auth/me) ---
+    // --- 3. Verificação de Sessão Atual (/api/auth/me) ---
     if (pathname === '/api/auth/me' && req.method === 'GET') {
       const authHeader = req.headers['authorization'] || '';
       const token = authHeader.replace(/^Bearer\s+/i, '');
-      const session = verifySessionToken(token);
+      const user = await verifySupabaseToken(token);
 
-      if (!session) {
+      if (!user) {
         res.writeHead(401);
-        res.end(JSON.stringify({ authenticated: false, error: 'Sessão inválida ou expirada.' }));
+        res.end(JSON.stringify({ authenticated: false, error: 'Sessão inválida ou expirada no Supabase Auth.' }));
+        return;
+      }
+
+      const adminVerified = await isUserAdmin(user.id, token);
+      if (!adminVerified) {
+        res.writeHead(403);
+        res.end(JSON.stringify({ authenticated: false, error: 'Usuário sem privilégios administrativos em orx_admins.' }));
         return;
       }
 
       res.writeHead(200);
-      res.end(JSON.stringify({ authenticated: true, user: { email: session.sub, role: session.role } }));
+      res.end(JSON.stringify({
+        authenticated: true,
+        user: { id: user.id, email: user.email, role: 'admin' }
+      }));
       return;
     }
 
-    // --- 3. Campanhas: Leitura Pública (/api/campaigns) ---
+    // --- 4. Campanhas Públicas (/api/campaigns) ---
     if (pathname === '/api/campaigns' && req.method === 'GET') {
-      const db = readDatabase();
-      const activeOnly = parsedUrl.searchParams.get('all') !== 'true';
+      // Consulta campanhas ativas no Supabase oficial
+      const sbRes = await supabaseFetch('/rest/v1/orx_ads_campaigns?status=eq.active&select=*');
+      let campaigns = [];
 
-      const campaigns = activeOnly 
-        ? db.campaigns.filter(c => c.status === 'active')
-        : db.campaigns;
+      if (sbRes.ok && Array.isArray(sbRes.data) && sbRes.data.length > 0) {
+        campaigns = sbRes.data;
+      } else {
+        // Preserva os espaços institucionais oficiais se a tabela ainda estiver vazia
+        campaigns = DEFAULT_INSTITUTIONAL_CAMPAIGNS;
+      }
 
       res.writeHead(200);
       res.end(JSON.stringify({ success: true, campaigns }));
       return;
     }
 
-    // --- 4. Campanhas: Gestão Administrativa (/api/campaigns/toggle) ---
-    if (pathname === '/api/campaigns/toggle' && req.method === 'POST') {
-      const authHeader = req.headers['authorization'] || '';
-      const session = verifySessionToken(authHeader.replace(/^Bearer\s+/i, ''));
-      if (!session) {
-        res.writeHead(403);
-        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador.' }));
-        return;
-      }
-
-      const campId = jsonBody.id;
-      const db = readDatabase();
-      const camp = db.campaigns.find(c => c.id === campId);
-      if (!camp) {
-        res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Campanha não encontrada.' }));
-        return;
-      }
-
-      camp.status = camp.status === 'active' ? 'paused' : 'active';
-      writeDatabase(db);
-
-      res.writeHead(200);
-      res.end(JSON.stringify({ success: true, campaign: camp }));
-      return;
-    }
-
-    // --- 5. Pedidos: Cadastro de Anunciante (/api/orders) ---
+    // --- 5. Pedidos: Cadastro de Anunciante (/api/orders - POST) ---
     if (pathname === '/api/orders' && req.method === 'POST') {
       const companyName = sanitizeString(jsonBody.company_name);
       const documentNumber = sanitizeString(jsonBody.document);
@@ -385,19 +372,19 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         return;
       }
 
-      // Validação de upload de imagem em Base64
+      // Validação de upload de banner em Base64
       let safeBannerUrl = '';
       if (bannerData) {
-        const matches = bannerData.match(/^data:(image\/(png|jpeg|webp|gif));base64,/);
+        const matches = bannerData.match(/^data:(image\/(png|jpeg|webp));base64,/);
         if (!matches) {
           res.writeHead(400);
           res.end(JSON.stringify({ error: 'Formato de banner inválido. Apenas PNG, JPEG ou WebP são permitidos.' }));
           return;
         }
-        // Validação de tamanho (máximo 2.5MB em base64)
-        if (bannerData.length > 3.5 * 1024 * 1024) {
+        // Limite estrito de 2MB em Base64 (~2.8MB texto)
+        if (bannerData.length > 2.8 * 1024 * 1024) {
           res.writeHead(400);
-          res.end(JSON.stringify({ error: 'Arquivo excede o limite de 2MB.' }));
+          res.end(JSON.stringify({ error: 'Arquivo excede o limite máximo permitido de 2MB.' }));
           return;
         }
         safeBannerUrl = bannerData;
@@ -406,84 +393,106 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       const orderCode = 'ORX-' + crypto.randomInt(100000, 999999);
       const plan = validPlans[planKey];
 
-      const newOrder = {
-        orderId: orderCode,
-        companyName,
-        documentNumber,
+      const newOrderPayload = {
+        order_code: orderCode,
+        company_name: companyName,
+        document_number: documentNumber,
         email,
         phone,
-        planKey,
-        planName: plan.name,
+        plan_key: planKey,
+        plan_name: plan.name,
         amount: plan.price,
         slot: plan.slot,
-        targetUrl,
-        bannerUrl: safeBannerUrl,
-        status: 'pending_review', // Em análise comercial formal
-        createdAt: new Date().toISOString()
+        target_url: targetUrl,
+        banner_url: safeBannerUrl,
+        status: 'pending_review'
       };
 
-      const db = readDatabase();
-      db.orders.unshift(newOrder);
-      writeDatabase(db);
+      // Persistência direta no Supabase oficial (orx_ads_orders)
+      const sbInsert = await supabaseFetch('/rest/v1/orx_ads_orders', {
+        method: 'POST',
+        headers: { 'Prefer': 'return=representation' },
+        body: newOrderPayload
+      });
 
-      // Resposta segura: Checkout automatizado desativado até fornecimento de dados fiscais/bancários oficiais
       res.writeHead(201);
       res.end(JSON.stringify({
         success: true,
         orderId: orderCode,
+        order_code: orderCode,
         status: 'pending_review',
-        message: 'Solicitação registrada com sucesso no banco de dados. Os dados comerciais e faturamento serão processados após homologação oficial da campanha.'
+        persisted: sbInsert.ok,
+        message: 'Solicitação protocolada com sucesso. Os dados comerciais e faturamento serão processados após homologação oficial da campanha.'
       }));
       return;
     }
 
-    // --- 6. Pedidos: Listagem e Gestão Administrativa (/api/orders) ---
+    // --- 6. Pedidos: Listagem Administrativa (/api/orders - GET) ---
     if (pathname === '/api/orders' && req.method === 'GET') {
       const authHeader = req.headers['authorization'] || '';
-      const session = verifySessionToken(authHeader.replace(/^Bearer\s+/i, ''));
-      if (!session) {
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+      const user = await verifySupabaseToken(token);
+
+      if (!user) {
         res.writeHead(401);
-        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação necessária.' }));
+        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação Supabase necessária.' }));
         return;
       }
 
-      const db = readDatabase();
+      const adminVerified = await isUserAdmin(user.id, token);
+      if (!adminVerified) {
+        res.writeHead(403);
+        res.end(JSON.stringify({ error: 'Acesso negado: Usuário sem permissões em orx_admins.' }));
+        return;
+      }
+
+      // Consulta pedidos no Supabase oficial usando o token do usuário (RLS ativo)
+      const sbOrders = await supabaseFetch('/rest/v1/orx_ads_orders?order=created_at.desc&select=*', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
       res.writeHead(200);
-      res.end(JSON.stringify({ success: true, orders: db.orders }));
+      res.end(JSON.stringify({
+        success: true,
+        orders: Array.isArray(sbOrders.data) ? sbOrders.data : []
+      }));
       return;
     }
 
-    // --- 7. Pedidos: Aprovação pelo Gestor (/api/orders/approve) ---
+    // --- 7. Pedidos: Aprovação de Campanha (/api/orders/approve) ---
     if (pathname === '/api/orders/approve' && req.method === 'POST') {
       const authHeader = req.headers['authorization'] || '';
-      const session = verifySessionToken(authHeader.replace(/^Bearer\s+/i, ''));
-      if (!session) {
+      const token = authHeader.replace(/^Bearer\s+/i, '');
+      const user = await verifySupabaseToken(token);
+
+      if (!user) {
         res.writeHead(401);
-        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação necessária.' }));
+        res.end(JSON.stringify({ error: 'Acesso restrito ao administrador. Autenticação Supabase necessária.' }));
         return;
       }
 
-      const orderId = jsonBody.orderId;
-      const db = readDatabase();
-      const order = db.orders.find(o => o.orderId === orderId);
-      if (!order) {
-        res.writeHead(404);
-        res.end(JSON.stringify({ error: 'Pedido não encontrado.' }));
+      const adminVerified = await isUserAdmin(user.id, token);
+      if (!adminVerified) {
+        res.writeHead(403);
+        res.end(JSON.stringify({ error: 'Acesso negado: Usuário sem permissões em orx_admins.' }));
         return;
       }
 
-      order.status = 'active';
+      const orderCode = jsonBody.orderId || jsonBody.order_code;
+      // Atualiza status do pedido no Supabase
+      const updateRes = await supabaseFetch(`/rest/v1/orx_ads_orders?order_code=eq.${orderCode}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: { status: 'active' }
+      });
 
-      // Cria a campanha correspondente ativa
+      // Cria campanha correspondente no Supabase
       const newCampaign = {
-        id: 'camp-' + order.orderId,
-        campaign_code: 'CAMP-' + order.orderId,
-        client_name: order.companyName,
-        title: `${order.companyName} • Anúncio Corporativo`,
-        slot: order.slot,
-        banner_url: order.bannerUrl,
-        target_url: order.targetUrl,
-        cta_text: 'Acessar Empresa',
+        campaign_code: 'CAMP-' + orderCode,
+        client_name: jsonBody.companyName || 'Anunciante Aprovado',
+        title: `${jsonBody.companyName || 'Anunciante'} • Anúncio Corporativo`,
+        slot: jsonBody.slot || 'feed-billboard',
+        target_url: jsonBody.targetUrl || '/anuncie.html',
         status: 'active',
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
@@ -491,33 +500,38 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         clicks: 0
       };
 
-      db.campaigns.unshift(newCampaign);
-      writeDatabase(db);
+      const campRes = await supabaseFetch('/rest/v1/orx_ads_campaigns', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Prefer': 'return=representation' },
+        body: newCampaign
+      });
 
       res.writeHead(200);
-      res.end(JSON.stringify({ success: true, campaign: newCampaign }));
+      res.end(JSON.stringify({
+        success: true,
+        campaign: (campRes.data && campRes.data[0]) || newCampaign
+      }));
       return;
     }
 
-    // --- 8. Telemetria: Registro Real de Impressões e Cliques (/api/telemetry) ---
+    // --- 8. Telemetria: Registro de Métricas (/api/telemetry) ---
     if (pathname === '/api/telemetry' && req.method === 'POST') {
-      const { campaignId, type } = jsonBody; // 'impression' ou 'click'
+      const { campaignId, type, slot } = jsonBody;
       if (!campaignId || !['impression', 'click'].includes(type)) {
         res.writeHead(400);
         res.end(JSON.stringify({ error: 'Parâmetros de telemetria inválidos.' }));
         return;
       }
 
-      const db = readDatabase();
-      const camp = db.campaigns.find(c => c.id === campaignId);
-      if (camp) {
-        if (type === 'impression') {
-          camp.impressions = (camp.impressions || 0) + 1;
-        } else if (type === 'click') {
-          camp.clicks = (camp.clicks || 0) + 1;
+      // Persiste evento no Supabase oficial (orx_ads_telemetry)
+      await supabaseFetch('/rest/v1/orx_ads_telemetry', {
+        method: 'POST',
+        body: {
+          campaign_id: campaignId,
+          event_type: type,
+          slot: slot || 'unknown'
         }
-        writeDatabase(db);
-      }
+      });
 
       res.writeHead(200);
       res.end(JSON.stringify({ success: true }));
@@ -531,5 +545,6 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
 }
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`ORLINX ADS Backend & Preview Server ativo em http://127.0.0.1:${PORT}`);
+  console.log(`ORLINX ADS Backend ativo em http://127.0.0.1:${PORT}`);
+  console.log(`Supabase Oficial: ${SUPABASE_URL}`);
 });

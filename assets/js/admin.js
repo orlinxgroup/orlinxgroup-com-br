@@ -1,18 +1,20 @@
 /**
  * ORLINX ADS - Painel Administrativo do Gestor
- * Autenticação Segura via Supabase Auth & Servidor Centralizado
- * Políticas RLS e Sessões Criptografadas (Zero LocalStorage, Zero Senhas Fixas)
+ * Projeto Oficial Exclusivo: ulajrvkaqqedwuaiaksp (https://ulajrvkaqqedwuaiaksp.supabase.co)
+ * Autenticação Segura via Supabase Auth com Verificação em orx_admins
+ * Políticas RLS Rigorosas (Zero Senhas Fixas, Zero LocalStorage)
  */
 
 (function () {
   'use strict';
 
   const TOKEN_KEY = 'orx_auth_jwt_token';
-  const SUPABASE_URL = window.ORLINX_SUPABASE_URL || 'https://tqcgckncuokfqblwbwal.supabase.co';
-  const SUPABASE_ANON_KEY = window.ORLINX_SUPABASE_ANON_KEY || 'sb_publishable_4OLjOUKtIqYh9tzWJBJySw_WWPSqtJR';
+  const OFFICIAL_SUPABASE_URL = 'https://ulajrvkaqqedwuaiaksp.supabase.co';
 
   class OrlinxAdsAdmin {
     constructor() {
+      this.supabaseUrl = window.ORLINX_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
+      this.supabaseAnonKey = window.ORLINX_SUPABASE_ANON_KEY || '';
       this.token = sessionStorage.getItem(TOKEN_KEY) || '';
       this.currentUser = null;
       this.campaigns = [];
@@ -22,7 +24,9 @@
     }
 
     async init() {
+      await this.loadRemoteConfig();
       this.initSupabaseClient();
+
       if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => this.checkAuthAndRender());
       } else {
@@ -30,10 +34,23 @@
       }
     }
 
+    async loadRemoteConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.supabaseUrl) this.supabaseUrl = cfg.supabaseUrl;
+          if (cfg.supabaseAnonKey) this.supabaseAnonKey = cfg.supabaseAnonKey;
+        }
+      } catch (e) {
+        // Usa configurações do escopo do projeto
+      }
+    }
+
     initSupabaseClient() {
       try {
-        if (typeof window.supabase !== 'undefined' && window.supabase.createClient) {
-          this.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        if (typeof window.supabase !== 'undefined' && window.supabase.createClient && this.supabaseAnonKey) {
+          this.supabaseClient = window.supabase.createClient(this.supabaseUrl, this.supabaseAnonKey);
         }
       } catch (err) {
         console.warn('[Supabase Client Init]', err.message || err);
@@ -41,24 +58,35 @@
     }
 
     async checkAuthAndRender() {
-      // 1. Verifica sessão ativa no Supabase Auth se o SDK estiver presente
+      // 1. Verificação via Supabase Auth
       if (this.supabaseClient) {
         try {
           const { data: { session } } = await this.supabaseClient.auth.getSession();
           if (session && session.user) {
-            this.currentUser = { email: session.user.email, role: 'admin', provider: 'supabase' };
-            this.token = session.access_token;
-            sessionStorage.setItem(TOKEN_KEY, session.access_token);
-            await this.loadDashboardData();
-            this.renderDashboard();
-            return;
+            // Valida autorização do usuário na tabela de administradores
+            const { data: adminRecord } = await this.supabaseClient
+              .from('orx_admins')
+              .select('role, is_active')
+              .eq('user_id', session.user.id)
+              .single();
+
+            if (adminRecord && adminRecord.is_active && adminRecord.role === 'admin') {
+              this.currentUser = { email: session.user.email, role: 'admin', provider: 'supabase' };
+              this.token = session.access_token;
+              sessionStorage.setItem(TOKEN_KEY, session.access_token);
+              await this.loadDashboardData();
+              this.renderDashboard();
+              return;
+            } else {
+              await this.supabaseClient.auth.signOut();
+            }
           }
         } catch (e) {
           console.warn('[Supabase Session Check]', e.message || e);
         }
       }
 
-      // 2. Se houver token de sessão no backend centralizado
+      // 2. Verificação via Sessão Segura da API
       if (this.token) {
         try {
           const res = await fetch('/api/auth/me', {
@@ -88,7 +116,7 @@
         return { success: false, error: 'Por favor, informe e-mail e senha institucional.' };
       }
 
-      // Tentativa 1: Supabase Auth oficial com políticas RLS
+      // 1. Autenticação direta no Supabase Auth oficial (projeto ulajrvkaqqedwuaiaksp)
       if (this.supabaseClient) {
         try {
           const { data, error } = await this.supabaseClient.auth.signInWithPassword({
@@ -97,19 +125,36 @@
           });
 
           if (!error && data && data.session) {
-            this.token = data.session.access_token;
-            sessionStorage.setItem(TOKEN_KEY, this.token);
-            this.currentUser = { email: data.user.email, role: 'admin', provider: 'supabase' };
-            await this.loadDashboardData();
-            this.renderDashboard();
-            return { success: true };
+            // Verificação rigorosa contra a tabela orx_admins (sem aceitar qualquer usuário autenticado)
+            const { data: adminRecord, error: adminErr } = await this.supabaseClient
+              .from('orx_admins')
+              .select('role, is_active')
+              .eq('user_id', data.user.id)
+              .single();
+
+            if (adminRecord && adminRecord.is_active && adminRecord.role === 'admin') {
+              this.token = data.session.access_token;
+              sessionStorage.setItem(TOKEN_KEY, this.token);
+              this.currentUser = { email: data.user.email, role: 'admin', provider: 'supabase' };
+              await this.loadDashboardData();
+              this.renderDashboard();
+              return { success: true };
+            } else {
+              await this.supabaseClient.auth.signOut();
+              return {
+                success: false,
+                error: 'Acesso negado: Usuário autenticado, mas não cadastrado como administrador em orx_admins.'
+              };
+            }
+          } else if (error) {
+            return { success: false, error: error.message || 'Credenciais inválidas no Supabase Auth.' };
           }
         } catch (sbErr) {
           console.warn('[Supabase Auth attempt]', sbErr.message || sbErr);
         }
       }
 
-      // Tentativa 2: Gateway Seguro no Servidor (PBKDF2 com Salt)
+      // 2. Gateway Seguro no Servidor (valida contra Supabase no backend)
       try {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
@@ -126,10 +171,10 @@
           this.renderDashboard();
           return { success: true };
         } else {
-          return { success: false, error: data.error || 'Acesso não autorizado. Verifique suas credenciais.' };
+          return { success: false, error: data.error || 'Acesso não autorizado. Credenciais inválidas.' };
         }
       } catch (err) {
-        return { success: false, error: 'Falha de comunicação com o servidor de autenticação centralizado.' };
+        return { success: false, error: 'Falha de comunicação com o serviço de autenticação.' };
       }
     }
 
@@ -176,7 +221,7 @@
               OX
             </div>
             <h2 class="text-2xl font-bold text-[#FDFBF7] font-space">Autenticação do Gestor</h2>
-            <p class="text-xs text-[#D3CBC3] mt-1">Supabase Auth &bull; Políticas RLS &bull; Sessões Criptografadas</p>
+            <p class="text-xs text-[#D3CBC3] mt-1">Supabase Auth &bull; ulajrvkaqqedwuaiaksp &bull; Tabela orx_admins</p>
           </div>
 
           <form id="admin-login-form" class="space-y-4">
@@ -186,7 +231,7 @@
             </div>
             <div>
               <label for="admin-password" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Senha de Acesso</label>
-              <input type="password" id="admin-password" required placeholder="Digite sua credencial institucional" class="w-full px-4 py-2.5 rounded-xl bg-[#080E1E] border border-[#4A332B] text-[#FDFBF7] placeholder-[#D3CBC3]/40 focus:outline-none focus:border-[#D4AF37] text-sm">
+              <input type="password" id="admin-password" required placeholder="Digite sua credencial cadastrada no Supabase" class="w-full px-4 py-2.5 rounded-xl bg-[#080E1E] border border-[#4A332B] text-[#FDFBF7] placeholder-[#D3CBC3]/40 focus:outline-none focus:border-[#D4AF37] text-sm">
             </div>
             <div id="login-error" class="hidden text-xs text-rose-300 bg-rose-950/60 border border-rose-800 p-2.5 rounded-lg"></div>
             <button type="submit" id="btn-submit-login" class="w-full py-3 px-4 rounded-xl text-sm font-bold btn-gold shadow-lg shadow-[#D4AF37]/20 flex items-center justify-center gap-2">
@@ -239,11 +284,11 @@
               <div class="flex items-center gap-2">
                 <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
                 <span class="text-xs font-bold uppercase tracking-wider text-[#D4AF37]">
-                  Autenticado &bull; ${this.currentUser?.provider === 'supabase' ? 'Supabase Auth (RLS Ativo)' : 'Sessão Segura no Servidor'}
+                  Autenticado &bull; Supabase ulajrvkaqqedwuaiaksp (orx_admins RLS)
                 </span>
               </div>
               <h1 class="text-2xl font-bold text-[#FDFBF7] font-space mt-1">Console de Governança &bull; ORLINX ADS</h1>
-              <p class="text-xs text-[#D3CBC3]">Conectado como: <strong>${this.escapeHtml(this.currentUser?.email || '')}</strong></p>
+              <p class="text-xs text-[#D3CBC3]">Conectado como Administrador: <strong>${this.escapeHtml(this.currentUser?.email || '')}</strong></p>
             </div>
             <div class="flex items-center gap-3">
               <button id="btn-export-csv" class="px-3.5 py-2 rounded-xl text-xs font-semibold btn-coffee flex items-center gap-1.5">
