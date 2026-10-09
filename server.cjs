@@ -429,7 +429,8 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       const validPlans = {
         starter: { name: 'Plano Starter', price: 199.00, slot: 'sidebar-box' },
         business: { name: 'Plano Business', price: 389.00, slot: 'feed-billboard' },
-        master: { name: 'Plano Master', price: 790.00, slot: 'top-leaderboard' }
+        master: { name: 'Plano Master', price: 790.00, slot: 'top-leaderboard' },
+        custom: { name: 'Pacote Corporativo Sob Medida', price: 0.00, slot: 'custom-package' }
       };
 
       if (!validPlans[planKey]) {

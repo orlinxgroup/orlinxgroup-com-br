@@ -291,13 +291,19 @@
             </div>
           </div>
 
+          <!-- Observações / Necessidades da Campanha (Opcional) -->
+          <div>
+            <label for="notes" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Observações Comerciais ou Período Previsto (Opcional)</label>
+            <textarea id="notes" name="notes" rows="2" placeholder="Ex: Previsão de início na próxima semana, campanha institucional ou solicitação de múltiplos slots..." class="w-full px-4 py-2.5 rounded-xl bg-[#080E1E] border border-[#4A332B] text-[#FDFBF7] placeholder-[#D3CBC3]/50 focus:outline-none focus:border-[#D4AF37] text-sm resize-none"></textarea>
+          </div>
+
           <!-- Upload de Banner Seguro com Preview -->
           <div class="space-y-2 pt-2">
             <label for="ad-banner-file" class="block text-xs font-semibold text-[#FDFBF7]">
-              Arquivo do Banner (PNG, JPG ou WebP - Máx 2MB)
+              Arquivo do Banner (PNG, JPG ou WebP - Máx 2MB) <span class="text-[#D3CBC3]/70 font-normal">(Opcional nesta fase de orçamento)</span>
             </label>
             <input type="file" id="ad-banner-file" accept="image/png, image/jpeg, image/webp" class="block w-full text-xs text-[#D3CBC3] file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-[#2E1F1A] file:text-[#FDFBF7] hover:file:bg-[#3D2922] cursor-pointer">
-            <p class="text-[11px] text-[#D3CBC3]">O criativo será conferido tecnicamente antes de ser ativado para assegurar conformidade com as diretrizes do portal.</p>
+            <p class="text-[11px] text-[#D3CBC3]">Caso ainda não possua o criativo pronto, nossa equipe entrará em contato para orientar as especificações técnicas.</p>
             <div id="banner-preview-box" class="pt-2"></div>
           </div>
 
