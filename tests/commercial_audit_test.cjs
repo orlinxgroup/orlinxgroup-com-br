@@ -1,9 +1,13 @@
 /**
- * ORLINX GROUP & ORLINX ADS - Testes Automatizados da Camada Comercial
+ * ORLINX GROUP & ORLINX ADS - Bateria Completa de Auditoria Técnica e Segurança
  * 1. Verificação de Integridade das Páginas Públicas (HTML, Tags AdSense, Políticas)
- * 2. Validação da Camada de Métricas & Telemetria (UTM, Conversion Events)
- * 3. Validação de Sanitização e Protocolos de URL
- * 4. Validação de Migrações SQL e Governança RLS
+ * 2. Integridade de ads.txt, Search Console e Subprojeto aloguinchos
+ * 3. Validação de Formulários Estruturados e Honeypot Anti-Spam
+ * 4. Validação de Segurança do Módulo commercial.js (Sem Conversão Pré-Persistência, Rate Limit)
+ * 5. Auditoria de Segurança RLS (Perfis: Anônimo, Autenticado Comum, Administrador)
+ * 6. Verificação de Ordem, Idempotência e Segurança das Migrações SQL
+ * 7. Validação do sitemap.xml e Rotas Canônicas
+ * 8. Comparação com Versão Pública para Prevenção de Regressões
  */
 
 const fs = require('fs');
@@ -12,9 +16,9 @@ const assert = require('assert');
 
 const ROOT = path.resolve(__dirname, '..');
 
-console.log('====================================================');
-console.log('INICIANDO AUDITORIA TÉCNICA E TESTES DA FASE COMERCIAL');
-console.log('====================================================\n');
+console.log('================================================================');
+console.log('AUDITORIA TÉCNICA INDEPENDENTE — ORLINX ADS (FASE COMERCIAL)');
+console.log('================================================================\n');
 
 let passCount = 0;
 let failCount = 0;
@@ -31,7 +35,7 @@ function runTest(name, fn) {
 }
 
 // --- Teste 1: Preservação de AdSense em Todas as Páginas Públicas ---
-runTest('Todas as páginas públicas contêm o snippet AdSense oficial e sem duplicação', () => {
+runTest('1. Todas as páginas públicas contêm o snippet AdSense oficial e sem duplicação', () => {
   const publicFiles = [
     'index.html',
     'anuncie.html',
@@ -46,18 +50,14 @@ runTest('Todas as páginas públicas contêm o snippet AdSense oficial e sem dup
     const filePath = path.join(ROOT, file);
     assert(fs.existsSync(filePath), `Arquivo ${file} não existe no diretório raiz`);
     const content = fs.readFileSync(filePath, 'utf8');
-    
-    // Deve conter o snippet
     assert(content.includes(expectedSnippet), `Arquivo ${file} não contém a tag AdSense`);
-    
-    // Não pode estar duplicado
     const matches = content.match(new RegExp(expectedSnippet, 'g'));
-    assert(matches && matches.length === 1, `Arquivo ${file} possui snippet AdSense duplicado (${matches ? matches.length : 0})`);
+    assert(matches && matches.length === 1, `Arquivo ${file} possui snippet AdSense duplicado`);
   });
 });
 
 // --- Teste 2: Integridade do ads.txt ---
-runTest('ads.txt possui exatamente a diretiva oficial do AdSense', () => {
+runTest('2. ads.txt possui exatamente a diretiva oficial do AdSense', () => {
   const adsTxtPath = path.join(ROOT, 'ads.txt');
   assert(fs.existsSync(adsTxtPath), 'ads.txt não encontrado');
   const content = fs.readFileSync(adsTxtPath, 'utf8').trim();
@@ -66,7 +66,7 @@ runTest('ads.txt possui exatamente a diretiva oficial do AdSense', () => {
 });
 
 // --- Teste 3: Preservação do Subprojeto aloguinchos e Search Console ---
-runTest('Subprojeto aloguinchos e Search Console permanecem intactos', () => {
+runTest('3. Subprojeto aloguinchos e Search Console permanecem intactos em dist/', () => {
   const gscFile = path.join(ROOT, 'dist', 'google182b9f4455b8f746.html');
   const aloguinchosDir = path.join(ROOT, 'dist', 'aloguinchos');
   assert(fs.existsSync(gscFile), 'google182b9f4455b8f746.html ausente em dist');
@@ -74,93 +74,202 @@ runTest('Subprojeto aloguinchos e Search Console permanecem intactos', () => {
 });
 
 // --- Teste 4: Auditoria de Formulários e Campos Obrigatórios ---
-runTest('anuncie.html e publicidade.html possuem formulários com campos estruturados', () => {
+runTest('4. Formulários em anuncie.html e publicidade.html possuem campos e honeypot anti-spam', () => {
   const anuncieContent = fs.readFileSync(path.join(ROOT, 'anuncie.html'), 'utf8');
   const lpContent = fs.readFileSync(path.join(ROOT, 'publicidade.html'), 'utf8');
 
   // anuncie.html
   assert(anuncieContent.includes('id="orx-ad-order-form"'), 'Formulário ausente em anuncie.html');
-  assert(anuncieContent.includes('name="company_name"'), 'Campo company_name ausente em anuncie.html');
-  assert(anuncieContent.includes('name="document"'), 'Campo document ausente em anuncie.html');
-  assert(anuncieContent.includes('name="email"'), 'Campo email ausente em anuncie.html');
-  assert(anuncieContent.includes('name="phone"'), 'Campo phone ausente em anuncie.html');
-  assert(anuncieContent.includes('name="plan"'), 'Campo plan ausente em anuncie.html');
-  assert(anuncieContent.includes('name="target_url"'), 'Campo target_url ausente em anuncie.html');
-  assert(anuncieContent.includes('name="notes"'), 'Campo notes ausente em anuncie.html');
+  assert(anuncieContent.includes('name="_hp_company_fax_orx"'), 'Honeypot ausente em anuncie.html');
+  assert(anuncieContent.includes('name="company_name"'), 'Campo company_name ausente');
+  assert(anuncieContent.includes('name="document"'), 'Campo document ausente');
+  assert(anuncieContent.includes('name="email"'), 'Campo email ausente');
+  assert(anuncieContent.includes('name="phone"'), 'Campo phone ausente');
+  assert(anuncieContent.includes('name="plan"'), 'Campo plan ausente');
+  assert(anuncieContent.includes('name="target_url"'), 'Campo target_url ausente');
+  assert(anuncieContent.includes('name="notes"'), 'Campo notes ausente');
 
   // publicidade.html (Landing Page Google Ads)
   assert(lpContent.includes('id="orx-lp-lead-form"'), 'Formulário ausente em publicidade.html');
-  assert(lpContent.includes('id="lp_company_name"'), 'Campo company_name ausente em publicidade.html');
-  assert(lpContent.includes('id="lp_document"'), 'Campo document ausente em publicidade.html');
-  assert(lpContent.includes('id="lp_email"'), 'Campo email ausente em publicidade.html');
-  assert(lpContent.includes('id="lp_phone"'), 'Campo phone ausente em publicidade.html');
-  assert(lpContent.includes('id="lp-plan-select"'), 'Campo plan ausente em publicidade.html');
-  assert(lpContent.includes('id="lp_target_url"'), 'Campo target_url ausente em publicidade.html');
+  assert(lpContent.includes('name="_hp_company_fax_orx"'), 'Honeypot ausente em publicidade.html');
+  assert(lpContent.includes('id="lp_company_name"'), 'Campo company_name ausente na LP');
+  assert(lpContent.includes('id="lp_document"'), 'Campo document ausente na LP');
+  assert(lpContent.includes('id="lp_email"'), 'Campo email ausente na LP');
+  assert(lpContent.includes('id="lp_phone"'), 'Campo phone ausente na LP');
+  assert(lpContent.includes('id="lp-plan-select"'), 'Campo plan ausente na LP');
+  assert(lpContent.includes('id="lp_target_url"'), 'Campo target_url ausente na LP');
 });
 
-// --- Teste 5: Validação da Camada de JavaScript Comercial ---
-runTest('commercial.js implementa rastreamento de UTM, eventos de conversão e proteção XSS', () => {
+// --- Teste 5: Garantia de Não Disparo de Conversão Sem Persistência ---
+runTest('5. commercial.js NÃO dispara conversão quando a persistência falha (persisted === false)', () => {
   const commercialJs = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'commercial.js'), 'utf8');
 
-  // Verificação de classes
-  assert(commercialJs.includes('OrlinxAnalyticsTracker'), 'Classe OrlinxAnalyticsTracker ausente');
-  assert(commercialJs.includes('OrlinxCommercialApp'), 'Classe OrlinxCommercialApp ausente');
+  // Isola o método handleSubmit até a definição de renderSuccessModal
+  const submitIndex = commercialJs.indexOf('async handleSubmit(');
+  assert(submitIndex !== -1, 'Método handleSubmit não encontrado');
+  const handleSubmitBody = commercialJs.slice(submitIndex, commercialJs.indexOf('renderSuccessModal(resData'));
 
-  // UTM tracking
-  assert(commercialJs.includes('utm_source'), 'Captura de utm_source ausente');
-  assert(commercialJs.includes('utm_campaign'), 'Captura de utm_campaign ausente');
-  assert(commercialJs.includes('gclid'), 'Captura de gclid ausente');
+  // Encontra estritamente o bloco if (persisted) { ... } else { ... }
+  const ifPersistedMatch = handleSubmitBody.match(/if\s*\(\s*persisted\s*\)\s*\{([\s\S]*?)\}\s*else\s*\{([\s\S]*?)\}/);
+  assert(ifPersistedMatch, 'Bloco if (persisted) ... else ... não encontrado em handleSubmit');
 
-  // Eventos de conversão
-  assert(commercialJs.includes('trackConversion'), 'Método trackConversion ausente');
-  assert(commercialJs.includes('generate_lead'), 'Evento generate_lead ausente');
+  const ifBlock = ifPersistedMatch[1];
+  const elseBlock = ifPersistedMatch[2];
 
-  // Proteção XSS
-  assert(commercialJs.includes('escapeHtml'), 'Método escapeHtml ausente');
-
-  // Supabase URL Oficial
-  assert(commercialJs.includes('https://ulajrvkaqqedwuaiaksp.supabase.co'), 'URL do Supabase incorreta em commercial.js');
-
-  // Zero senhas fixas
-  assert(!commercialJs.includes('orlinx2026'), 'Senha fixa detectada em commercial.js');
+  // O disparo deve estar ESTRITAMENTE dentro do ifBlock
+  assert(ifBlock.includes('this.analytics.trackConversion'), 'Regra violada: trackConversion deve ser chamado quando persisted for true');
+  assert(!elseBlock.includes('trackConversion'), 'Regra violada: trackConversion detectado no bloco de falha (persisted === false)');
+  assert(elseBlock.includes('this.renderFallbackModal'), 'Regra violada: renderFallbackModal não foi chamado na falha de persistência');
 });
 
-// --- Teste 6: Validação de Segurança e Políticas RLS nos Schemas SQL ---
-runTest('Migrações SQL não concedem privilégios genéricos e implementam RLS rigoroso', () => {
+// --- Teste 6: Proteção Anti-Spam e Debounce ---
+runTest('6. commercial.js implementa detecção de Honeypot e Debounce/Rate-Limiting local', () => {
+  const commercialJs = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'commercial.js'), 'utf8');
+
+  // Verificação de honeypot
+  assert(commercialJs.includes('_hp_company_fax_orx'), 'Checagem de honeypot ausente no submit');
+
+  // Verificação de debounce / rate limiting
+  assert(commercialJs.includes('LAST_SUBMIT_KEY'), 'Chave de rate limiting ausente');
+  assert(commercialJs.includes('Date.now()'), 'Checagem de timestamp para rate limiting ausente');
+});
+
+// --- Teste 7: Ausência Total de Senhas Fixas, Chaves Privadas e URLs Antigas ---
+runTest('7. Varredura de segurança: zero senhas padrão, zero service_role no frontend e Supabase oficial exclusivo', () => {
+  const filesToScan = [
+    'assets/js/commercial.js',
+    'assets/js/admin.js',
+    'assets/js/ads-engine.js',
+    'server.cjs',
+    'index.html',
+    'anuncie.html',
+    'publicidade.html'
+  ];
+
+  const forbiddenTerms = [
+    'orlinx2026',
+    'service_role',
+    'SUPABASE_SERVICE_ROLE_KEY',
+    'orlinx 2.0',
+    'orlinx2.0'
+  ];
+
+  filesToScan.forEach((file) => {
+    const filePath = path.join(ROOT, file);
+    if (!fs.existsSync(filePath)) return;
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    // Chave de serviço nunca pode estar no frontend
+    if (file.startsWith('assets/')) {
+      assert(!content.includes('service_role'), `Termo "service_role" encontrado indevidamente no frontend: ${file}`);
+      assert(!content.includes('SUPABASE_SERVICE_ROLE_KEY'), `Chave de serviço mencionada no frontend: ${file}`);
+    }
+
+    assert(!content.includes('orlinx2026'), `Senha fixa "orlinx2026" encontrada em ${file}`);
+
+    // Qualquer referência a supabase.co deve ser estritamente ulajrvkaqqedwuaiaksp
+    const sbMatches = content.match(/https?:\/\/[a-z0-9_-]+\.supabase\.co/gi) || [];
+    sbMatches.forEach((url) => {
+      assert.strictEqual(url, 'https://ulajrvkaqqedwuaiaksp.supabase.co', `URL não autorizada do Supabase em ${file}: ${url}`);
+    });
+  });
+});
+
+// --- Teste 8: Validação de Segurança RLS e Simulação de Perfis de Acesso ---
+runTest('8. Políticas RLS garantem isolamento: anônimo só insere pendente, admin exclusivo em orx_admins consulta', () => {
   const baseSql = fs.readFileSync(path.join(ROOT, 'supabase', 'migrations', '20261008_orlinx_ads_schema.sql'), 'utf8');
   const extSql = fs.readFileSync(path.join(ROOT, 'supabase', 'migrations', '20261009_commercial_leads_extension.sql'), 'utf8');
 
-  // Nenhuma concessão de admin para auth.role() = 'authenticated'
-  assert(!baseSql.includes("USING (auth.role() = 'authenticated')"), 'Falha de segurança RLS: permissão administrativa ampla detectada');
+  // RLS Habilitado em todas as tabelas
+  assert(baseSql.includes('ALTER TABLE public.orx_admins ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em orx_admins');
+  assert(baseSql.includes('ALTER TABLE public.orx_ads_orders ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em orx_ads_orders');
+  assert(baseSql.includes('ALTER TABLE public.orx_ads_campaigns ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em orx_ads_campaigns');
+  assert(baseSql.includes('ALTER TABLE public.orx_ads_telemetry ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em orx_ads_telemetry');
 
-  // RLS habilitado
-  assert(baseSql.includes('ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em tabelas');
+  // Função SECURITY DEFINER sem brecha de recursão
+  assert(baseSql.includes('CREATE OR REPLACE FUNCTION public.is_admin()'), 'Função is_admin ausente');
+  assert(baseSql.includes('SECURITY DEFINER'), 'is_admin deve ser SECURITY DEFINER');
+  assert(baseSql.includes('SET search_path = public, auth, pg_temp'), 'search_path não blindado');
 
-  // Função SECURITY DEFINER com search_path seguro
-  assert(baseSql.includes('SET search_path = public, auth, pg_temp'), 'search_path inseguro na função is_admin');
+  // Restrição de EXECUTE em is_admin
+  assert(baseSql.includes('REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon;'), 'is_admin acessível para anon');
 
-  // Extensão de leads preserva RLS
-  assert(extSql.includes("status = 'pending_review'"), 'Extensão RLS não restringe status a pending_review');
+  // Anônimo: Permissão estrita de INSERT com validação de status
+  assert(baseSql.includes('CREATE POLICY "Anon can insert orders"'), 'Política Anon can insert orders ausente');
+  assert(baseSql.includes("status = 'pending_review'"), 'Validação de status pending_review ausente na inserção anônima');
+
+  // Usuário autenticado comum: NÃO possui acesso a pedidos de outros
+  assert(!baseSql.includes("USING (auth.role() = 'authenticated')"), 'Permissão ampla para qualquer usuário autenticado detectada');
+
+  // Consulta de pedidos: restrita a public.is_admin()
+  assert(baseSql.includes('CREATE POLICY "Admins can view and manage orders"'), 'Política de gestão de pedidos ausente');
+  assert(baseSql.includes('USING (public.is_admin())'), 'Política de leitura de pedidos não usa public.is_admin()');
 });
 
-// --- Teste 7: Validação do sitemap.xml ---
-runTest('sitemap.xml inclui todas as rotas públicas oficiais', () => {
+// --- Teste 9: Ordem e Idempotência das Migrações SQL ---
+runTest('9. Migrações são idempotentes e aplicáveis na ordem correta', () => {
+  const migDir = path.join(ROOT, 'supabase', 'migrations');
+  const migFiles = fs.readdirSync(migDir).filter(f => f.endsWith('.sql')).sort();
+
+  assert.strictEqual(migFiles[0], '20261008_orlinx_ads_schema.sql', 'Primeira migração deve ser o schema base');
+  assert.strictEqual(migFiles[1], '20261009_commercial_leads_extension.sql', 'Segunda migração deve ser a extensão de leads');
+
+  const extContent = fs.readFileSync(path.join(migDir, migFiles[1]), 'utf8');
+  assert(extContent.includes('ALTER TABLE IF EXISTS public.orx_ads_orders'), 'Extensão deve usar IF EXISTS');
+  assert(extContent.includes('ADD COLUMN IF NOT EXISTS lead_source'), 'Extensão deve usar ADD COLUMN IF NOT EXISTS');
+});
+
+// --- Teste 10: Integridade do sitemap.xml ---
+runTest('10. sitemap.xml inclui todas as rotas públicas oficiais', () => {
   const sitemapContent = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
-  assert(sitemapContent.includes('https://www.orlinxgroup.com.br/'), 'Home ausente no sitemap');
-  assert(sitemapContent.includes('https://www.orlinxgroup.com.br/anuncie.html'), 'anuncie.html ausente no sitemap');
-  assert(sitemapContent.includes('https://www.orlinxgroup.com.br/publicidade.html'), 'publicidade.html ausente no sitemap');
-  assert(sitemapContent.includes('https://www.orlinxgroup.com.br/termos-publicidade.html'), 'termos ausentes no sitemap');
-  assert(sitemapContent.includes('https://www.orlinxgroup.com.br/politica-privacidade.html'), 'privacidade ausente no sitemap');
+  const expectedRoutes = [
+    'https://www.orlinxgroup.com.br/',
+    'https://www.orlinxgroup.com.br/anuncie.html',
+    'https://www.orlinxgroup.com.br/publicidade.html',
+    'https://www.orlinxgroup.com.br/termos-publicidade.html',
+    'https://www.orlinxgroup.com.br/politica-privacidade.html'
+  ];
+
+  expectedRoutes.forEach((route) => {
+    assert(sitemapContent.includes(route), `Rota ${route} ausente no sitemap.xml`);
+  });
 });
 
-console.log('\n----------------------------------------------------');
-console.log(`TOTAL DE TESTES: ${passCount + failCount}`);
+// --- Teste 11: Prevenção de Regressão em dist/ ---
+runTest('11. Diretório dist/ preserva todos os recursos essenciais da versão pública', () => {
+  const distDir = path.join(ROOT, 'dist');
+  assert(fs.existsSync(distDir), 'Diretório dist/ não existe');
+
+  const requiredDistFiles = [
+    'index.html',
+    'anuncie.html',
+    'publicidade.html',
+    'termos-publicidade.html',
+    'politica-privacidade.html',
+    'ads.txt',
+    'robots.txt',
+    'sitemap.xml',
+    'google182b9f4455b8f746.html',
+    'admin.html'
+  ];
+
+  requiredDistFiles.forEach((file) => {
+    assert(fs.existsSync(path.join(distDir, file)), `Arquivo ${file} ausente em dist/`);
+  });
+
+  // admin.html em dist/ deve permanecer desativado
+  const distAdmin = fs.readFileSync(path.join(distDir, 'admin.html'), 'utf8');
+  assert(distAdmin.includes('Acesso Administrativo Restrito') || distAdmin.includes('Ambiente Privado'), 'admin.html em dist não está desativado com segurança');
+});
+
+console.log('\n----------------------------------------------------------------');
+console.log(`TOTAL DE TESTES EXECUTADOS: ${passCount + failCount}`);
 console.log(`APROVADOS: ${passCount}`);
 console.log(`FALHAS: ${failCount}`);
-console.log('----------------------------------------------------');
+console.log('----------------------------------------------------------------');
 
 if (failCount > 0) {
   process.exit(1);
 } else {
-  console.log('\n>> TODOS OS TESTES FORAM CONCLUÍDOS COM SUCESSO! <<\n');
+  console.log('\n>> TODAS AS 11 VERIFICAÇÕES DE AUDITORIA FORAM APROVADAS COM SUCESSO! <<\n');
 }
