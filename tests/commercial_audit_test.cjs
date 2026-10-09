@@ -262,6 +262,41 @@ runTest('11. Diretório dist/ preserva todos os recursos essenciais da versão p
   assert(distAdmin.includes('Acesso Administrativo Restrito') || distAdmin.includes('Ambiente Privado'), 'admin.html em dist não está desativado com segurança');
 });
 
+// --- Teste 12: Canal Oficial Exclusivo comercial@orlinxgroup.com.br ---
+runTest('12. comercial@orlinxgroup.com.br é o canal exclusivo de atendimento e contingência comercial', () => {
+  const termsContent = fs.readFileSync(path.join(ROOT, 'termos-publicidade.html'), 'utf8');
+  const anuncieContent = fs.readFileSync(path.join(ROOT, 'anuncie.html'), 'utf8');
+  const lpContent = fs.readFileSync(path.join(ROOT, 'publicidade.html'), 'utf8');
+  const commercialJs = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'commercial.js'), 'utf8');
+
+  // Termos de publicidade deve apontar para comercial@orlinxgroup.com.br
+  assert(termsContent.includes('comercial@orlinxgroup.com.br'), 'termos-publicidade.html não referencia comercial@orlinxgroup.com.br');
+  assert(!termsContent.includes('contato@orlinxgroup.com.br'), 'termos-publicidade.html ainda referencia contato@orlinxgroup.com.br indevidamente');
+
+  // anuncie.html e publicidade.html devem ter comercial@orlinxgroup.com.br
+  assert(anuncieContent.includes('comercial@orlinxgroup.com.br'), 'anuncie.html não referencia comercial@orlinxgroup.com.br');
+  assert(lpContent.includes('comercial@orlinxgroup.com.br'), 'publicidade.html não referencia comercial@orlinxgroup.com.br');
+
+  // commercial.js deve utilizar comercial@orlinxgroup.com.br no mailto de contingência
+  assert(commercialJs.includes('mailto:comercial@orlinxgroup.com.br'), 'commercial.js não aponta mailto para comercial@orlinxgroup.com.br');
+});
+
+// --- Teste 13: Validação do Fluxo de Contingência por E-mail ---
+runTest('13. Fluxo de contingência por e-mail gera formatação completa com parâmetros subject e body', () => {
+  const commercialJs = fs.readFileSync(path.join(ROOT, 'assets', 'js', 'commercial.js'), 'utf8');
+
+  // Verifica método renderFallbackModal
+  assert(commercialJs.includes('renderFallbackModal('), 'Método renderFallbackModal ausente em commercial.js');
+  assert(commercialJs.includes('emailSubject = encodeURIComponent('), 'Codificação de subject ausente no fallback');
+  assert(commercialJs.includes('emailBody = encodeURIComponent('), 'Codificação de body ausente no fallback');
+
+  // Verifica que o corpo inclui os campos essenciais
+  assert(commercialJs.includes('orderPayload.company_name'), 'Nome da empresa ausente no payload de contingência');
+  assert(commercialJs.includes('orderPayload.email'), 'E-mail ausente no payload de contingência');
+  assert(commercialJs.includes('orderPayload.phone'), 'Telefone ausente no payload de contingência');
+  assert(commercialJs.includes('orderPayload.target_url'), 'Target URL ausente no payload de contingência');
+});
+
 console.log('\n----------------------------------------------------------------');
 console.log(`TOTAL DE TESTES EXECUTADOS: ${passCount + failCount}`);
 console.log(`APROVADOS: ${passCount}`);
@@ -271,5 +306,5 @@ console.log('----------------------------------------------------------------');
 if (failCount > 0) {
   process.exit(1);
 } else {
-  console.log('\n>> TODAS AS 11 VERIFICAÇÕES DE AUDITORIA FORAM APROVADAS COM SUCESSO! <<\n');
+  console.log('\n>> TODAS AS 13 VERIFICAÇÕES DE AUDITORIA FORAM APROVADAS COM SUCESSO! <<\n');
 }
