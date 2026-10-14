@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Briefing Digital & Criação de Sites | ORLINX GROUP & ORLINX ADS</title>
+  <meta name="description" content="Solicite o desenvolvimento do seu website corporativo ou institucional com a ORLINX. Formulário de briefing estruturado em 10 etapas, upload seguro de arquivos e opção de publicidade no ORLINX ADS.">
+  <link rel="canonical" href="https://www.orlinxgroup.com.br/briefing.html">
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.orlinxgroup.com.br/briefing.html">
+  <meta property="og:title" content="Briefing Digital & Criação de Sites | ORLINX GROUP">
+  <meta property="og:description" content="Especifique as necessidades do seu projeto web com protocolo de atendimento exclusivo e proposta comercial personalizada.">
+
+  <!-- Tipografia & Estilos Oficiais -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/assets/css/tokens.css">
+
+  <!-- Google AdSense - Verificação de Propriedade do Domínio -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4210799128628231" crossorigin="anonymous"></script>
+
+  <style>
+    .step-content { display: none; }
+    .step-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .custom-checkbox:checked + label {
+      border-color: var(--orx-gold);
+      background-color: rgba(212, 175, 55, 0.12);
+    }
+    .custom-radio:checked + label {
+      border-color: var(--orx-gold);
+      background-color: rgba(212, 175, 55, 0.12);
+      box-shadow: 0 0 15px rgba(212, 175, 55, 0.18);
+    }
+  </style>
+</head>
+<body class="bg-[#080E1E] text-[#F5EFEB] min-h-screen flex flex-col selection:bg-[#D4AF37] selection:text-[#080E1E]">
+
+  <!-- Cabeçalho Institucional -->
+  <header class="sticky top-0 z-40 bg-[#080E1E]/95 backdrop-blur-md border-b border-[#1E3158]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3 group focus:outline-none focus:ring-2 focus:ring-[#D4AF37] rounded-lg p-1" aria-label="Voltar para a Home">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#2E1F1A] via-[#A68020] to-[#D4AF37] flex items-center justify-center font-extrabold text-[#080E1E] text-xl font-space shadow-lg shadow-[#D4AF37]/20 border border-[#E8C86A]/40">
+          OX
+        </div>
+        <div>
+          <span class="text-xl font-extrabold tracking-wider font-space text-[#FDFBF7] block">ORLINX <span class="text-[#D4AF37] font-light">GROUP</span></span>
+          <span class="text-[10px] tracking-widest uppercase text-[#D3CBC3] block -mt-1">Projetos & Mídia Digital</span>
+        </div>
+      </a>
+
+      <div class="hidden md:flex items-center gap-6 text-xs text-[#D3CBC3]">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Ambiente Seguro SSL 256-bit</span>
+        </div>
+        <span class="text-[#1E3158]">|</span>
+        <div class="flex items-center gap-2">
+          <span>&#128196; Protocolo Digital Imediato</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a href="/" class="text-xs font-semibold text-[#D3CBC3] hover:text-[#FDFBF7] transition-colors">
+          &larr; Portal Principal
+        </a>
+        <a href="mailto:comercial@orlinxgroup.com.br" class="hidden sm:inline-flex px-3.5 py-1.5 rounded-lg text-xs font-medium border border-[#4A332B] text-[#D4AF37] hover:bg-[#2E1F1A] transition-colors">
+          comercial@orlinxgroup.com.br
+        </a>
+      </div>
+    </div>
+
+    <!-- Barra de Progresso Superior das 10 Etapas -->
+    <div class="w-full bg-[#0E1830] h-1.5 border-t border-[#1E3158]">
+      <div id="briefing-progress-bar" class="h-full bg-gradient-to-r from-[#A68020] via-[#D4AF37] to-[#E8C86A] transition-all duration-300" style="width: 10%;"></div>
+    </div>
+  </header>
+
+  <main class="flex-grow py-8 sm:py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+
+      <!-- Banner de Introdução do Briefing -->
+      <div class="mb-8 text-center sm:text-left sm:flex sm:items-center sm:justify-between bg-gradient-to-r from-[#0E1830] to-[#1F1511] p-6 rounded-2xl border border-[#1E3158]">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D4AF37]/15 border border-[#D4AF37]/30 text-[#D4AF37] text-xs font-semibold mb-2">
+            <span>&#128640;</span> Especificação de Projeto & Proposta Comercial
+          </div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-[#FDFBF7] font-space tracking-tight">
+            Briefing Digital para Criação de Website
+          </h1>
+          <p class="text-xs sm:text-sm text-[#D3CBC3] mt-1 max-w-2xl">
+            Preencha as informações do seu projeto em 10 etapas guiadas. Ao concluir, geramos seu protocolo oficial de atendimento e nossa equipe técnica elabora sua proposta personalizada.
+          </p>
+        </div>
+        <div class="mt-4 sm:mt-0 text-right">
+          <div class="text-[11px] text-[#D3CBC3] uppercase tracking-wider font-semibold">Progresso Geral</div>
+          <div id="step-counter-text" class="text-lg font-extrabold text-[#D4AF37] font-space">Etapa 1 de 10</div>
+          <div id="draft-status-pill" class="text-[10px] text-emerald-400 mt-0.5 flex items-center justify-end gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Rascunho salvo
+          </div>
+        </div>
+      </div>
+
+      <!-- Navegador de Etapas Superior (Scroll Horizontal no Mobile) -->
+      <nav aria-label="Etapas do briefing" class="mb-8 overflow-x-auto pb-2 scrollbar-thin">
+        <ol id="steps-pill-nav" class="flex items-center gap-2 min-w-max">
+          <!-- Gerado dinamicamente pelo briefing.js -->
+        </ol>
+      </nav>
+
+      <!-- Mensagens de Erro / Alertas Globais -->
+      <div id="briefing-alert-box" class="hidden mb-6 p-4 rounded-xl text-xs sm:text-sm border" role="alert"></div>
+
+      <!-- Formulário Multietapas do Briefing -->
+      <form id="orlinx-briefing-form" novalidate class="bg-[#0E1830]/90 backdrop-blur-md border border-[#1E3158] rounded-2xl p-6 sm:p-8 shadow-xl space-y-8">
+        
+        <!-- Campo Honeypot Oculto Anti-Spam (Não preencher) -->
+        <div style="display:none;" aria-hidden="true">
+          <input type="text" name="_hp_briefing_corp_catch" id="_hp_briefing_corp_catch" tabindex="-1" autocomplete="off" value="">
+        </div>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 1: DADOS INSTITUCIONAIS & CONTATO COMERCIAL -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content active" data-step="1">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">1</span>
+            Dados Institucionais e Contato Comercial
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Identificação formal da sua empresa e do responsável pela interlocução técnica.</p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="sm:col-span-2">
+              <label for="company_name" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Razão Social ou Nome da Empresa *</label>
+              <input type="text" id="company_name" name="company_name" required placeholder="Ex: Inovação & Tecnologia Ltda" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="trading_name" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Nome Fantasia (Opcional)</label>
+              <input type="text" id="trading_name" name="trading_name" placeholder="Ex: InovaTech" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="document_number" class="block text-xs font-semibold text-[#FDFBF7] mb-1">CNPJ ou CPF do Titular *</label>
+              <input type="text" id="document_number" name="document_number" required placeholder="00.000.000/0000-00" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="contact_name" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Nome Completo do Responsável *</label>
+              <input type="text" id="contact_name" name="contact_name" required placeholder="Ex: João da Silva" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="email" class="block text-xs font-semibold text-[#FDFBF7] mb-1">E-mail Corporativo *</label>
+              <input type="email" id="email" name="email" required placeholder="contato@empresa.com.br" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="phone" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Telefone / WhatsApp com DDD *</label>
+              <input type="tel" id="phone" name="phone" required placeholder="(11) 99999-9999" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="city_state" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Cidade / Estado (UF)</label>
+              <input type="text" id="city_state" name="city_state" placeholder="Ex: São Paulo / SP" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div class="sm:col-span-2">
+              <label for="business_segment" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Segmento de Atuação da Empresa</label>
+              <input type="text" id="business_segment" name="business_segment" placeholder="Ex: Engenharia Civil, Logística, Consultoria Jurídica, Tecnologia, Saúde" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 2: VISÃO GERAL & OBJETIVOS DO SITE -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="2">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">2</span>
+            Visão Geral e Objetivos Estratégicos
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Defina o modelo de website pretendido e os principais resultados de negócio esperados.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Tipo de Projeto Pretendido *</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <input type="radio" id="type_institucional" name="project_type" value="institucional" class="sr-only custom-radio" checked>
+                  <label for="type_institucional" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Institucional</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Website corporativo completo com apresentação de serviços e autoridade.</span>
+                  </label>
+                </div>
+
+                <div>
+                  <input type="radio" id="type_landing" name="project_type" value="landing_page" class="sr-only custom-radio">
+                  <label for="type_landing" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Landing Page</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Página única de alta conversão focada em campanhas Google Ads e captação.</span>
+                  </label>
+                </div>
+
+                <div>
+                  <input type="radio" id="type_ecommerce" name="project_type" value="ecommerce" class="sr-only custom-radio">
+                  <label for="type_ecommerce" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">E-commerce</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Loja virtual com catálogo, checkout seguro e meios de pagamento.</span>
+                  </label>
+                </div>
+
+                <div>
+                  <input type="radio" id="type_catalogo" name="project_type" value="catalogo_produtos" class="sr-only custom-radio">
+                  <label for="type_catalogo" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Catálogo B2B</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Exibição de linha de produtos com orçamento direto via WhatsApp.</span>
+                  </label>
+                </div>
+
+                <div>
+                  <input type="radio" id="type_portal" name="project_type" value="portal_noticias" class="sr-only custom-radio">
+                  <label for="type_portal" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Portal / Blog</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Veículo editorial com notícias, artigos e monetização programática.</span>
+                  </label>
+                </div>
+
+                <div>
+                  <input type="radio" id="type_sistema" name="project_type" value="sistema_web" class="sr-only custom-radio">
+                  <label for="type_sistema" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Sistema Web</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Plataforma personalizada com área de membros e banco de dados exclusivo.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="primary_goal" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Objetivo Principal do Site *</label>
+              <select id="primary_goal" name="primary_goal" required class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+                <option value="gerar_leads">Geração de Leads e Contatos Comerciais Qualificados</option>
+                <option value="vendas_diretas">Vendas Diretas Online de Produtos / Serviços</option>
+                <option value="fortalecer_marca">Fortalecimento Institucional de Marca e Credibilidade B2B</option>
+                <option value="apresentar_servicos">Apresentação Detalhada de Serviços e Portfólio</option>
+                <option value="atendimento_suporte">Canal de Atendimento, Agendamento e Suporte ao Cliente</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="target_audience" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Perfil do Público-Alvo e Clientes Ideais</label>
+              <input type="text" id="target_audience" name="target_audience" placeholder="Ex: Diretores financeiros, gerentes de logística, consumidores finais classe A/B" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <label for="project_summary" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Resumo Executivo do Projeto e Mensagem Principal</label>
+              <textarea id="project_summary" name="project_summary" rows="3" placeholder="Descreva brevemente a história da empresa, proposta única de valor e o que torna o seu negócio diferenciado..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 3: ESCOPO, PÁGINAS & FUNCIONALIDADES -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="3">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">3</span>
+            Escopo, Estrutura de Páginas e Recursos
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Selecione as páginas previstas e as integrações necessárias para o portal.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Páginas Previstas na Arquitetura de Informação</span>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                <div>
+                  <input type="checkbox" id="page_home" name="required_pages[]" value="Home" class="sr-only custom-checkbox" checked>
+                  <label for="page_home" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Home (Página Inicial)
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_sobre" name="required_pages[]" value="Quem Somos" class="sr-only custom-checkbox" checked>
+                  <label for="page_sobre" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Quem Somos / Empresa
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_servicos" name="required_pages[]" value="Serviços" class="sr-only custom-checkbox" checked>
+                  <label for="page_servicos" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Serviços / Soluções
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_contato" name="required_pages[]" value="Contato" class="sr-only custom-checkbox" checked>
+                  <label for="page_contato" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Contato & Localização
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_portfolio" name="required_pages[]" value="Portfólio" class="sr-only custom-checkbox">
+                  <label for="page_portfolio" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Portfólio / Casos Reais
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_produtos" name="required_pages[]" value="Produtos" class="sr-only custom-checkbox">
+                  <label for="page_produtos" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Catálogo de Produtos
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_blog" name="required_pages[]" value="Blog" class="sr-only custom-checkbox">
+                  <label for="page_blog" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    Blog / Artigos & SEO
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="page_faq" name="required_pages[]" value="FAQ" class="sr-only custom-checkbox">
+                  <label for="page_faq" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold text-center transition-all">
+                    FAQ / Central de Ajuda
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Recursos Especiais e Integrações Desejadas</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <input type="checkbox" id="feat_whatsapp" name="custom_features[]" value="Botão Flutuante WhatsApp" class="sr-only custom-checkbox" checked>
+                  <label for="feat_whatsapp" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#128172; Botão WhatsApp Flutuante
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="feat_form" name="custom_features[]" value="Formulário com Envio Seguro" class="sr-only custom-checkbox" checked>
+                  <label for="feat_form" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#9993; Formulário Anti-Spam
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="feat_seo" name="custom_features[]" value="Otimização SEO e Meta Tags" class="sr-only custom-checkbox" checked>
+                  <label for="feat_seo" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#128269; Otimização SEO Google
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="feat_map" name="custom_features[]" value="Mapa Interativo Google Maps" class="sr-only custom-checkbox">
+                  <label for="feat_map" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#128506; Mapa Interativo Google
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="feat_members" name="custom_features[]" value="Área de Membros / Login" class="sr-only custom-checkbox">
+                  <label for="feat_members" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#128274; Área Restrita / Login
+                  </label>
+                </div>
+                <div>
+                  <input type="checkbox" id="feat_schedule" name="custom_features[]" value="Agendamento Online Integrado" class="sr-only custom-checkbox">
+                  <label for="feat_schedule" class="block p-3 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 text-xs font-semibold transition-all">
+                    &#128197; Agendamento Online
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="special_requirements" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Requisitos Especiais, Sistemas Externos ou APIs</label>
+              <textarea id="special_requirements" name="special_requirements" rows="2" placeholder="Ex: Integração com ERP, sistema de CRM Hubspot/RD Station, gateway de pagamento Pagar.me/Mercado Pago..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 4: IDENTIDADE VISUAL, PALETA DE CORES & DESIGN -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="4">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">4</span>
+            Identidade Visual, Paleta de Cores e Estilo
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Alinhe a direção artística, situação da marca e combinações cromáticas do layout.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Situação Atual da Marca / Logotipo</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <input type="radio" id="brand_ready" name="brand_status" value="possui_marca_pronta" class="sr-only custom-radio" checked>
+                  <label for="brand_ready" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Marca Pronta</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Possui logotipo e enviará os arquivos na próxima etapa.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="brand_redesign" name="brand_status" value="precisa_redesenho" class="sr-only custom-radio">
+                  <label for="brand_redesign" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Modernização</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Possui marca antiga e deseja redesenho ou modernização.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="brand_new" name="brand_status" value="precisa_criar_marca" class="sr-only custom-radio">
+                  <label for="brand_new" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Criar do Zero</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Deseja contratar criação de logotipo e identidade visual com a ORLINX.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="design_style" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Estilo Visual Pretendido</label>
+              <select id="design_style" name="design_style" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+                <option value="moderno_corporativo">Moderno Corporativo (Sóbrio, Elegante, Minimalista, Alto Padrão)</option>
+                <option value="tecnologico_inovador">Tecnológico & Inovador (Dark Theme, Gradientes e Efeitos Neumórficos)</option>
+                <option value="criativo_expressivo">Criativo & Expressivo (Tipografia Marcante, Cores Vivas e Dinamismo)</option>
+                <option value="classico_tradicional">Clássico & Tradicional (Visual Institucional, Tons Neutros e Conservador)</option>
+              </select>
+            </div>
+
+            <!-- Seletor Interativo de Cores -->
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Paleta de Cores de Preferência</span>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="p-3 rounded-xl bg-[#080E1E] border border-[#1E3158]">
+                  <label for="color_primary" class="block text-[11px] text-[#D3CBC3] mb-1">Cor Primária</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="color_primary" name="color_primary" value="#080E1E" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+                    <input type="text" id="color_primary_txt" value="#080E1E" class="w-full text-xs font-mono bg-transparent text-[#FDFBF7] border-b border-[#1E3158] py-1 uppercase focus:outline-none focus:border-[#D4AF37]">
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-[#080E1E] border border-[#1E3158]">
+                  <label for="color_secondary" class="block text-[11px] text-[#D3CBC3] mb-1">Cor Secundária</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="color_secondary" name="color_secondary" value="#2E1F1A" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+                    <input type="text" id="color_secondary_txt" value="#2E1F1A" class="w-full text-xs font-mono bg-transparent text-[#FDFBF7] border-b border-[#1E3158] py-1 uppercase focus:outline-none focus:border-[#D4AF37]">
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-[#080E1E] border border-[#1E3158]">
+                  <label for="color_accent" class="block text-[11px] text-[#D3CBC3] mb-1">Cor de Destaque</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="color_accent" name="color_accent" value="#D4AF37" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+                    <input type="text" id="color_accent_txt" value="#D4AF37" class="w-full text-xs font-mono bg-transparent text-[#FDFBF7] border-b border-[#1E3158] py-1 uppercase focus:outline-none focus:border-[#D4AF37]">
+                  </div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-[#080E1E] border border-[#1E3158]">
+                  <label for="color_avoid" class="block text-[11px] text-[#D3CBC3] mb-1">Cor a Evitar</label>
+                  <div class="flex items-center gap-2">
+                    <input type="color" id="color_avoid" name="color_avoid" value="#FF0055" class="w-8 h-8 rounded border-0 bg-transparent cursor-pointer">
+                    <input type="text" id="color_avoid_txt" value="#FF0055" class="w-full text-xs font-mono bg-transparent text-[#FDFBF7] border-b border-[#1E3158] py-1 uppercase focus:outline-none focus:border-[#D4AF37]">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="design_notes" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Orientações e Notas Complementares de Design</label>
+              <textarea id="design_notes" name="design_notes" rows="2" placeholder="Ex: Gostamos de bastante espaço em branco, fotografias reais em vez de ilustrações 3D, tipografia limpa..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 5: UPLOAD SEGURO DE DOCUMENTOS & ATIVOS DE MARCA -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="5">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">5</span>
+            Upload Seguro de Arquivos (Cofre Privado)
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Envie arquivos de logotipo, manual de marca, fotos e certidões INPI. Todos os uploads são validados por assinatura real e mantidos em diretório privado.</p>
+
+          <div class="space-y-6">
+            <!-- Dropzone de Arquivos -->
+            <div id="file-dropzone" class="p-8 border-2 border-dashed border-[#1E3158] hover:border-[#D4AF37] rounded-2xl bg-[#080E1E]/60 text-center transition-colors cursor-pointer">
+              <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.webp,.svg,.pdf" class="hidden">
+              <div class="w-12 h-12 rounded-full bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center text-xl mx-auto mb-3">
+                &#128190;
+              </div>
+              <p class="text-sm font-bold text-[#FDFBF7]">Arraste seus arquivos aqui ou clique para selecionar</p>
+              <p class="text-xs text-[#D3CBC3] mt-1">Formatos aceitos: PNG, JPEG, WebP, SVG e PDF. Limite máximo de 5MB por arquivo.</p>
+              
+              <div class="mt-4 flex flex-wrap justify-center gap-2">
+                <button type="button" onclick="document.getElementById('file-input').click()" class="px-4 py-2 rounded-xl text-xs font-bold btn-gold shadow">
+                  Procurar Arquivos no Dispositivo
+                </button>
+              </div>
+            </div>
+
+            <!-- Seleção de Categoria para cada arquivo carregado -->
+            <div id="uploaded-files-list-container" class="hidden space-y-3">
+              <span class="text-xs font-bold text-[#D4AF37] uppercase tracking-wider block">Arquivos Selecionados para Envio Seguro</span>
+              <ul id="uploaded-files-list" class="space-y-2">
+                <!-- Renderizado via JS -->
+              </ul>
+            </div>
+
+            <!-- Aviso de Governança e Privacidade de Documentos -->
+            <div class="p-3.5 rounded-xl bg-[#142244]/60 border border-[#1E3158] flex items-start gap-3">
+              <span class="text-[#D4AF37] text-base">&#128274;</span>
+              <p class="text-[11px] text-[#D3CBC3] leading-relaxed">
+                <strong class="text-[#FDFBF7]">Isolamento e Segurança de Ativos:</strong> Seus arquivos são gravados em cofre fechado com nomes aleatórios e sem exposição pública na web. O acesso é liberado exclusivamente para a equipe de desenvolvimento após autenticação administrativa.
+              </p>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 6: REFERÊNCIAS VISUAIS & CONCORRÊNCIA -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="6">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">6</span>
+            Referências Visuais, Concorrência e Benchmarks
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Indique websites de referência e detalhes que você admira no mercado.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Websites de Referência que Você Admira</span>
+              <div id="benchmarks-container" class="space-y-3">
+                <div class="benchmark-row p-3 rounded-xl bg-[#080E1E] border border-[#1E3158] grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input type="url" name="benchmark_url[]" placeholder="https://exemplo.com.br" class="px-3 py-2 rounded-lg bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7] focus:outline-none">
+                  <input type="text" name="benchmark_notes[]" placeholder="O que você mais gosta neste site? (Ex: layout limpo, fotos)" class="px-3 py-2 rounded-lg bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7] focus:outline-none">
+                </div>
+              </div>
+              <button type="button" id="btn-add-benchmark" class="mt-2 text-xs font-semibold text-[#D4AF37] hover:underline flex items-center gap-1">
+                + Adicionar Outra Referência
+              </button>
+            </div>
+
+            <div>
+              <label for="disliked_elements" class="block text-xs font-semibold text-[#D3CBC3] mb-1">O que você definitivamente NÃO quer no seu novo website?</label>
+              <textarea id="disliked_elements" name="disliked_elements" rows="2" placeholder="Ex: Pop-ups invasivos, efeitos que dificultem a leitura, fundos muito claros, menus confusos..." class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]"></textarea>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 7: CONTEÚDO, FOTOGRAFIAS & IDIOMAS -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="7">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">7</span>
+            Produção de Conteúdo, Textos e Idiomas
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Defina a origem do material textual, fotos corporativas e abrangência de idiomas.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Origem dos Textos do Website (Copywriting)</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <input type="radio" id="content_client" name="content_source" value="cliente_fornece_pronto" class="sr-only custom-radio" checked>
+                  <label for="content_client" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Textos Próprios</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Forneceremos todos os textos prontos e revisados.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="content_copy" name="content_source" value="orlinx_copywriting" class="sr-only custom-radio">
+                  <label for="content_copy" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Redação ORLINX</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Desejamos que a ORLINX redija os textos persuasivos (Copy).</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="content_mixed" name="content_source" value="misto" class="sr-only custom-radio">
+                  <label for="content_mixed" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Modelo Misto</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Enviaremos os tópicos brutos para a ORLINX lapidar e formatar.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Acervo de Imagens e Fotografias</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <input type="radio" id="media_own" name="media_source" value="fotos_proprias" class="sr-only custom-radio" checked>
+                  <label for="media_own" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Fotos Próprias</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Possuímos banco de fotos em alta resolução da empresa e equipe.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="media_stock" name="media_source" value="banco_imagens" class="sr-only custom-radio">
+                  <label for="media_stock" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Banco Profissional</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Desejamos curadoria de fotos de alta qualidade fornecidas pela ORLINX.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="media_need" name="media_source" value="necessita_sessao" class="sr-only custom-radio">
+                  <label for="media_need" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Sessão Fotográfica</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Necessitamos de produção fotográfica presencial.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Idiomas Desejados no Site</span>
+              <div class="flex flex-wrap gap-3">
+                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#080E1E] border border-[#1E3158] text-xs cursor-pointer">
+                  <input type="checkbox" name="languages[]" value="pt-BR" checked class="text-[#D4AF37] focus:ring-0">
+                  <span>Português (Brasil)</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#080E1E] border border-[#1E3158] text-xs cursor-pointer">
+                  <input type="checkbox" name="languages[]" value="en-US" class="text-[#D4AF37] focus:ring-0">
+                  <span>Inglês (English)</span>
+                </label>
+                <label class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-[#080E1E] border border-[#1E3158] text-xs cursor-pointer">
+                  <input type="checkbox" name="languages[]" value="es-ES" class="text-[#D4AF37] focus:ring-0">
+                  <span>Espanhol (Español)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 8: DOMÍNIO, HOSPEDAGEM & E-MAILS -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="8">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">8</span>
+            Infraestrutura de Domínio, Hospedagem e E-mails
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Configurações de infraestrutura técnica, servidores e caixas postais corporativas.</p>
+
+          <div class="space-y-6">
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Status do Domínio (Endereço .com.br)</span>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <input type="radio" id="domain_has" name="domain_status" value="ja_registrado" class="sr-only custom-radio" checked>
+                  <label for="domain_has" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Já Registrado</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Já possuímos o domínio e temos acesso à zona DNS.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="domain_want" name="domain_status" value="deseja_registro" class="sr-only custom-radio">
+                  <label for="domain_want" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Registrar com ORLINX</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Desejamos que a ORLINX registre e administre o domínio.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="domain_help" name="domain_status" value="nao_sabe" class="sr-only custom-radio">
+                  <label for="domain_help" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Precisa de Ajuda</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Não temos certeza e precisamos de orientação comercial.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="domain_name" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Endereço do Domínio (se já definido ou pretendido)</label>
+              <input type="text" id="domain_name" name="domain_name" placeholder="Ex: suaempresa.com.br" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] focus:outline-none text-sm text-[#FDFBF7]">
+            </div>
+
+            <div>
+              <span class="block text-xs font-semibold text-[#FDFBF7] mb-2">Preferência de Hospedagem Web</span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <input type="radio" id="host_orx" name="hosting_preference" value="hospedagem_orlinx" class="sr-only custom-radio" checked>
+                  <label for="host_orx" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Hospedagem Gerenciada ORLINX</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Infraestrutura em nuvem de alta performance com certificado SSL e backups contínuos.</span>
+                  </label>
+                </div>
+                <div>
+                  <input type="radio" id="host_own" name="hosting_preference" value="hospedagem_propria" class="sr-only custom-radio">
+                  <label for="host_own" class="block p-3.5 rounded-xl border border-[#1E3158] bg-[#080E1E] cursor-pointer hover:border-[#D4AF37]/50 transition-all">
+                    <span class="text-sm font-bold text-[#FDFBF7] block mb-1">Servidor Próprio do Cliente</span>
+                    <span class="text-[11px] text-[#D3CBC3] block">Publicação em servidor ou hospedagem externa já contratada pelo cliente.</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label for="corporate_emails_needed" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Quantidade de Caixas Postais de E-mail Corporativo</label>
+              <input type="number" id="corporate_emails_needed" name="corporate_emails_needed" min="0" max="100" value="0" class="w-32 px-3.5 py-2 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] text-sm text-[#FDFBF7]">
+              <span class="text-[11px] text-[#D3CBC3] ml-2">(Ex: contato@, vendas@, financeiro@)</span>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 9: PUBLICIDADE ORLINX ADS (OPCIONAL & INDEPENDENTE) -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="9">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">9</span>
+            Publicidade & Mídia ORLINX ADS (Módulo Opcional)
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Módulo totalmente independente. Impulsione a presença digital da sua marca perante o público executivo do portal ORLINX GROUP.</p>
+
+          <div class="space-y-6">
+            <!-- Box de Ativação do Módulo Publicitário -->
+            <div class="p-4 rounded-xl bg-[#1F1511]/80 border border-[#4A332B] flex items-start gap-3">
+              <input type="checkbox" id="ads_opt_in" name="ads_opt_in" value="true" class="mt-1 w-4 h-4 text-[#D4AF37] rounded border-[#4A332B] focus:ring-0">
+              <div>
+                <label for="ads_opt_in" class="text-sm font-bold text-[#FDFBF7] cursor-pointer">
+                  Desejo incluir uma campanha de veiculação publicitária na rede ORLINX ADS
+                </label>
+                <p class="text-xs text-[#D3CBC3] mt-0.5">
+                  Ao marcar esta opção, apresentamos os formatos de banners disponíveis. A contratação do website NÃO é condicionada à veiculação de anúncios.
+                </p>
+              </div>
+            </div>
+
+            <!-- Campos Condicionais do ORLINX ADS (Exibidos se ads_opt_in estiver marcado) -->
+            <div id="ads-conditional-section" class="hidden space-y-4 p-5 rounded-xl bg-[#080E1E] border border-[#1E3158]">
+              <span class="text-xs font-bold text-[#D4AF37] uppercase tracking-wider block">Preferências de Veiculação da Campanha</span>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="ads_format" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Formato do Banner</label>
+                  <select id="ads_format" name="ads_format" class="w-full px-3.5 py-2.5 rounded-xl bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                    <option value="top-leaderboard">Topo Leaderboard (728 x 90 px) - Máxima visibilidade</option>
+                    <option value="feed-billboard">Billboard no Feed (970 x 250 px) - Alto engajamento</option>
+                    <option value="sidebar-box">Box Lateral (300 x 250 px) - Excelente custo-benefício</option>
+                    <option value="custom-package">Pacote Corporativo Multiformato</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="ads_period_days" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Período de Veiculação Inicial</label>
+                  <select id="ads_period_days" name="ads_period_days" class="w-full px-3.5 py-2.5 rounded-xl bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                    <option value="30">30 dias de veiculação</option>
+                    <option value="60">60 dias de veiculação (5% desconto)</option>
+                    <option value="90">90 dias de veiculação (10% desconto)</option>
+                    <option value="180">Semestral Corporativo</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label for="ads_target_url" class="block text-xs font-semibold text-[#D3CBC3] mb-1">URL de Destino do Anúncio (Link de Conversão)</label>
+                  <input type="url" id="ads_target_url" name="ads_target_url" placeholder="https://suaempresa.com.br/oferta" class="w-full px-3.5 py-2.5 rounded-xl bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                </div>
+
+                <div>
+                  <label for="ads_budget_range" class="block text-xs font-semibold text-[#D3CBC3] mb-1">Expectativa de Investimento Mensal</label>
+                  <select id="ads_budget_range" name="ads_budget_range" class="w-full px-3.5 py-2.5 rounded-xl bg-[#0E1830] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                    <option value="R$ 199/mês (Plano Starter)">R$ 199/mês (Plano Starter)</option>
+                    <option value="R$ 389/mês (Plano Business)">R$ 389/mês (Plano Business)</option>
+                    <option value="R$ 790/mês (Plano Master)">R$ 790/mês (Plano Master)</option>
+                    <option value="Personalizado Sob Medida">Personalizado Sob Medida</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- ================================================================= -->
+        <!-- ETAPA 10: CRONOGRAMA, INVESTIMENTO, LGPD & CONSENTIMENTOS -->
+        <!-- ================================================================= -->
+        <fieldset class="step-content" data-step="10">
+          <legend class="text-lg font-bold text-[#FDFBF7] font-space flex items-center gap-2 mb-2">
+            <span class="w-7 h-7 rounded-lg bg-[#D4AF37]/20 border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center text-xs">10</span>
+            Prazos, Faixa de Investimento e Consentimentos Legais
+          </legend>
+          <p class="text-xs text-[#D3CBC3] mb-6">Última etapa. Alinhe datas, faixas orçamentárias e formalize o aceite com base na LGPD.</p>
+
+          <div class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="target_launch_date" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Data Pretendida para Lançamento do Site</label>
+                <input type="date" id="target_launch_date" name="target_launch_date" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                <span class="text-[10px] text-[#D3CBC3] mt-1 block">Caso não possua data fixa, deixe em branco para prazo padrão da proposta.</span>
+              </div>
+
+              <div>
+                <label for="investment_bracket" class="block text-xs font-semibold text-[#FDFBF7] mb-1">Faixa de Investimento Estimada para o Desenvolvimento</label>
+                <select id="investment_bracket" name="investment_bracket" class="w-full px-3.5 py-2.5 rounded-xl bg-[#080E1E] border border-[#1E3158] focus:border-[#D4AF37] text-xs text-[#FDFBF7]">
+                  <option value="A definir na proposta comercial">A definir na proposta comercial (Padrão)</option>
+                  <option value="Até R$ 3.000 (Landing Page / Básico)">Até R$ 3.000 (Landing Page / Básico)</option>
+                  <option value="R$ 3.000 a R$ 6.000 (Institucional Completo)">R$ 3.000 a R$ 6.000 (Institucional Completo)</option>
+                  <option value="R$ 6.000 a R$ 12.000 (E-commerce / Módulos Avançados)">R$ 6.000 a R$ 12.000 (E-commerce / Módulos Avançados)</option>
+                  <option value="Acima de R$ 12.000 (Plataforma Sob Medida)">Acima de R$ 12.000 (Plataforma Sob Medida)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- CONSENTIMENTOS LEGAIS RIGOROSAMENTE SEPARADOS (LGPD) -->
+            <div class="space-y-4 pt-4 border-t border-[#1E3158]">
+              <span class="text-xs font-bold text-[#D4AF37] uppercase tracking-wider block">Consentimentos e Proteção de Dados (LGPD)</span>
+
+              <!-- 1. Consentimento Obrigatório: Termos & Privacidade -->
+              <div class="p-4 rounded-xl bg-[#080E1E] border border-[#1E3158] flex items-start gap-3">
+                <input type="checkbox" id="privacy_policy_accepted" name="privacy_policy_accepted" required class="mt-1 w-4 h-4 text-[#D4AF37] rounded border-[#1E3158] focus:ring-0">
+                <div>
+                  <label for="privacy_policy_accepted" class="text-xs text-[#FDFBF7] leading-relaxed cursor-pointer">
+                    <strong class="text-[#D4AF37]">Aceite Obrigatório da LGPD:</strong> Li e concordo integralmente com a 
+                    <a href="/politica-privacidade.html" target="_blank" rel="noopener noreferrer" class="text-[#D4AF37] underline hover:text-[#E8C86A]">Política de Privacidade</a> 
+                    e os Termos do ORLINX GROUP. Autorizo o tratamento e custódia segura dos dados informados para fins exclusivos de análise de viabilidade técnica e emissão de proposta comercial. *
+                  </label>
+                </div>
+              </div>
+
+              <!-- 2. Consentimento Separado e Opcional: Autorização de Portfólio (Desmarcado por padrão) -->
+              <div class="p-4 rounded-xl bg-[#080E1E] border border-[#1E3158] flex items-start gap-3">
+                <input type="checkbox" id="portfolio_showcase_authorized" name="portfolio_showcase_authorized" value="true" class="mt-1 w-4 h-4 text-[#D4AF37] rounded border-[#1E3158] focus:ring-0">
+                <div>
+                  <label for="portfolio_showcase_authorized" class="text-xs text-[#D3CBC3] leading-relaxed cursor-pointer">
+                    <strong class="text-[#FDFBF7]">Autorização para Portfólio (Opcional):</strong> Autorizo que o website, após publicado e aprovado, seja exibido no catálogo de projetos e cases de sucesso da ORLINX (print de tela e link de crédito institucional). Não autoriza divulgação de dados confidenciais ou métricas privadas.
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </fieldset>
+
+        <!-- Barra de Botões de Navegação Inferior -->
+        <div class="pt-6 border-t border-[#1E3158] flex items-center justify-between">
+          <button type="button" id="btn-prev-step" class="px-5 py-2.5 rounded-xl text-xs font-semibold text-[#D3CBC3] border border-[#1E3158] hover:bg-[#142244] hover:text-[#FDFBF7] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+            &larr; Etapa Anterior
+          </button>
+
+          <button type="button" id="btn-next-step" class="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-lg shadow-[#D4AF37]/15">
+            Próxima Etapa &rarr;
+          </button>
+
+          <button type="submit" id="btn-submit-briefing" class="hidden px-7 py-3 rounded-xl text-xs font-extrabold btn-gold shadow-xl shadow-[#D4AF37]/20 flex items-center gap-2">
+            <span id="btn-submit-spinner" class="hidden animate-spin">&#9696;</span>
+            <span>Finalizar Briefing & Gerar Protocolo &rarr;</span>
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </main>
+
+  <!-- Modal de Confirmação e Sucesso com Protocolo Oficial -->
+  <div id="briefing-success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" role="dialog" aria-modal="true">
+    <div class="bg-[#0E1830] border border-[#D4AF37] rounded-2xl max-w-lg w-full p-6 sm:p-8 text-center space-y-6 shadow-2xl">
+      <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#2E1F1A] via-[#A68020] to-[#D4AF37] text-[#080E1E] text-3xl font-extrabold flex items-center justify-center mx-auto shadow-lg shadow-[#D4AF37]/30">
+        &#10003;
+      </div>
+
+      <div>
+        <h2 class="text-2xl font-extrabold text-[#FDFBF7] font-space">Briefing Protocolado com Sucesso!</h2>
+        <p class="text-xs sm:text-sm text-[#D3CBC3] mt-2">
+          Suas especificações foram salvas com segurança no banco de dados centralizado e o arquivo PDF executivo foi gerado para análise técnica.
+        </p>
+      </div>
+
+      <!-- Caixa de Destaque do Protocolo -->
+      <div class="p-4 rounded-xl bg-[#080E1E] border border-[#1E3158] space-y-2">
+        <span class="text-[11px] text-[#D3CBC3] uppercase tracking-wider font-semibold block">Protocolo Oficial Registrado</span>
+        <div class="flex items-center justify-center gap-2">
+          <span id="modal-protocol-display" class="text-xl sm:text-2xl font-mono font-bold text-[#D4AF37] tracking-wider">BRF-2026-000000</span>
+          <button type="button" id="btn-copy-protocol" title="Copiar protocolo" class="px-2.5 py-1 text-xs rounded bg-[#142244] border border-[#1E3158] text-[#D3CBC3] hover:text-[#D4AF37]">
+            Copiar
+          </button>
+        </div>
+        <span class="text-[10px] text-emerald-400 block">&#10003; Notificação disparada para comercial@orlinxgroup.com.br</span>
+      </div>
+
+      <div class="text-left text-xs text-[#D3CBC3] space-y-2 bg-[#142244]/40 p-4 rounded-xl border border-[#1E3158]">
+        <strong class="text-[#FDFBF7] block">Próximos Passos:</strong>
+        <p>1. Nossa equipe comercial analisará as 10 seções do briefing e os arquivos anexados.</p>
+        <p>2. Um consultor entrará em contato via WhatsApp/E-mail em até 24 horas úteis com a estimativa de esforço.</p>
+        <p>3. Guarde o número de protocolo acima para eventuais consultas de status.</p>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+        <button type="button" onclick="window.print()" class="px-4 py-2.5 rounded-xl text-xs font-semibold text-[#FDFBF7] bg-[#142244] border border-[#1E3158] hover:bg-[#1E3158] transition-colors">
+          &#128438; Imprimir Comprovante
+        </button>
+        <a href="/" class="px-6 py-2.5 rounded-xl text-xs font-bold btn-gold shadow">
+          Retornar à Página Inicial
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rodapé Institucional -->
+  <footer class="bg-[#080E1E] border-t border-[#1E3158] py-8 text-xs text-[#D3CBC3]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <span class="font-extrabold text-[#FDFBF7] font-space">ORLINX GROUP</span>
+        <span>•</span>
+        <span>Divisão de Desenvolvimento Web & ORLINX ADS</span>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="/politica-privacidade.html" class="hover:text-[#D4AF37] transition-colors">Política de Privacidade (LGPD)</a>
+        <a href="/termos-publicidade.html" class="hover:text-[#D4AF37] transition-colors">Termos de Publicidade</a>
+        <a href="mailto:comercial@orlinxgroup.com.br" class="hover:text-[#D4AF37] transition-colors">comercial@orlinxgroup.com.br</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Script Lógico do Briefing -->
+  <script src="/assets/js/briefing.js"></script>
+</body>
+</html>
