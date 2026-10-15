@@ -111,8 +111,8 @@ runTest('3. briefing.html contém todas as 10 seções estruturadas', () => {
   assert(content.includes('name="_hp_briefing_corp_catch"'), 'Honeypot anti-spam ausente no formulário');
 });
 
-// --- Teste 4: Verificação de Consentimentos Separados na Migration SQL ---
-runTest('4. Migration SQL separa estritamente LGPD e Portfólio com RLS restrito a is_admin()', () => {
+// --- Teste 4: Verificação de Consentimentos Separados e RLS Seguro na Migration SQL ---
+runTest('4. Migration SQL separa estritamente LGPD/Portfólio e protege audit log sem inserção anônima', () => {
   const sqlPath = path.join(ROOT, 'supabase', 'migrations', '20261014_orlinx_briefing_schema.sql');
   assert(fs.existsSync(sqlPath), 'Arquivo de migração de briefing não encontrado');
   const sql = fs.readFileSync(sqlPath, 'utf8');
@@ -123,11 +123,18 @@ runTest('4. Migration SQL separa estritamente LGPD e Portfólio com RLS restrito
   assert(sql.includes('portfolio_showcase_authorized BOOLEAN NOT NULL DEFAULT false'), 'Coluna portfolio_showcase_authorized ausente');
   assert(sql.includes('protocol_code VARCHAR(32) NOT NULL UNIQUE'), 'Coluna protocol_code ausente');
 
-  // RLS
+  // RLS orx_briefings
   assert(sql.includes('ALTER TABLE public.orx_briefings ENABLE ROW LEVEL SECURITY;'), 'RLS não habilitado em orx_briefings');
   assert(sql.includes('USING (public.is_admin())'), 'Política restrita a public.is_admin() ausente');
   assert(!sql.includes("auth.role() = 'authenticated'"), "Proibido uso genérico de auth.role() = 'authenticated'");
   assert(sql.includes('CREATE TABLE IF NOT EXISTS public.orx_briefing_audit_log'), 'Tabela orx_briefing_audit_log ausente');
+
+  // RLS orx_briefing_audit_log: Eliminação de inserção anônima irrestrita e adoção de trigger confiável
+  assert(!sql.includes('WITH CHECK (true);'), 'Vulnerabilidade: WITH CHECK (true) não pode existir no schema de auditoria');
+  assert(sql.includes('trg_orx_briefing_audit_created'), 'Trigger automático confiável de auditoria ausente');
+  assert(sql.includes('SECURITY DEFINER'), 'Função de trigger deve operar como SECURITY DEFINER');
+  assert(sql.includes('Admins can insert briefing audit logs'), 'Inserção direta em logs deve ser restrita a administradores');
+  assert(sql.includes('REVOKE ALL ON public.orx_briefing_audit_log FROM anon'), 'Privilégios de anon devem ser revogados na auditoria');
 });
 
 // --- Teste 5: Gerador de PDF 100% Nativo (lib/pdf_generator.cjs) ---

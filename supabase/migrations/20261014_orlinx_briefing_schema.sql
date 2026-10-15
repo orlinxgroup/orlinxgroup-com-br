@@ -127,23 +127,77 @@ CREATE POLICY "Admins have full access to briefings"
     USING (public.is_admin())
     WITH CHECK (public.is_admin());
 
--- 5. Políticas de Segurança RLS para orx_briefing_audit_log
+-- 5. Governança e Políticas de Segurança RLS para orx_briefing_audit_log
+-- REGRA DE AUDITORIA: Inserções por anônimos são ESTRITAMENTE PROIBIDAS via API REST pública.
+-- A gravação de criação de briefing ocorre exclusivamente via trigger confiável no banco de dados.
+-- Demais eventos de auditoria e leitura são permitidos exclusivamente para administradores ativos.
 
--- A. Inserção de log permitida na submissão
+-- A. Revoga qualquer política permissiva anterior
 DROP POLICY IF EXISTS "System and public can log briefing events" ON public.orx_briefing_audit_log;
-CREATE POLICY "System and public can log briefing events"
+
+-- B. Inserção direta de logs de auditoria restrita EXCLUSIVAMENTE a Administradores Ativos
+-- (utilizada para auditoria de ações administrativas: 'status_changed', 'file_downloaded', 'pdf_viewed')
+DROP POLICY IF EXISTS "Admins can insert briefing audit logs" ON public.orx_briefing_audit_log;
+CREATE POLICY "Admins can insert briefing audit logs"
     ON public.orx_briefing_audit_log
     FOR INSERT
-    TO anon, authenticated
-    WITH CHECK (true);
+    TO authenticated
+    WITH CHECK (public.is_admin());
 
--- B. Leitura de logs restrita a Administradores
+-- C. Leitura de logs de auditoria restrita EXCLUSIVAMENTE a Administradores Ativos
 DROP POLICY IF EXISTS "Admins can view briefing audit logs" ON public.orx_briefing_audit_log;
 CREATE POLICY "Admins can view briefing audit logs"
     ON public.orx_briefing_audit_log
     FOR SELECT
     TO authenticated
     USING (public.is_admin());
+
+-- D. Mecanismo Confiável: Trigger Automático de Auditoria na Criação do Briefing
+-- Executa com privilégios de SECURITY DEFINER e search_path restrito, garantindo integridade
+-- sem expor a tabela de logs a inserções fraudulentas pelo endpoint anônimo da API.
+CREATE OR REPLACE FUNCTION public.fn_orx_briefing_audit_created()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    INSERT INTO public.orx_briefing_audit_log (
+        briefing_id,
+        action,
+        actor_type,
+        actor_id,
+        ip_hash,
+        details,
+        created_at
+    ) VALUES (
+        NEW.id,
+        'created',
+        'client',
+        NULL,
+        NEW.privacy_ip_hash,
+        jsonb_build_object(
+            'protocol_code', NEW.protocol_code,
+            'company_name', NEW.company_name,
+            'project_type', NEW.project_type,
+            'email', NEW.email
+        ),
+        timezone('utc'::text, now())
+    );
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_orx_briefing_audit_created ON public.orx_briefings;
+CREATE TRIGGER trg_orx_briefing_audit_created
+    AFTER INSERT ON public.orx_briefings
+    FOR EACH ROW
+    EXECUTE FUNCTION public.fn_orx_briefing_audit_created();
+
+-- E. Controle estrito de concessões (Grants/Revokes)
+REVOKE ALL ON public.orx_briefing_audit_log FROM anon, public;
+GRANT SELECT, INSERT ON public.orx_briefing_audit_log TO authenticated;
+
 
 -- 6. Índices para Otimização de Consultas e Relatórios
 CREATE INDEX IF NOT EXISTS idx_orx_briefings_protocol ON public.orx_briefings(protocol_code);

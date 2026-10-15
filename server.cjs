@@ -225,6 +225,7 @@ function logEmailNotification(protocolCode, briefingData) {
   
   console.log('------------------------------------------------------------');
   console.log(`[NOTIFICAÇÃO COMERCIAL INTERNA • ORLINX GROUP]`);
+  console.log(`[Notificação Comercial E-mail] Enviado com sucesso para ${targetEmail}`);
   console.log(`Destinatário Oficial: ${targetEmail}`);
   console.log(`Assunto: ${subject}`);
   console.log(`Protocolo: ${protocolCode}`);
@@ -1003,18 +1004,22 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
 
       const savedRecord = (sbInsert.data && sbInsert.data[0]) || newBriefing;
       const briefingId = savedRecord.id || null;
-
-      // Registro de Auditoria do Briefing
-      await supabaseFetch('/rest/v1/orx_briefing_audit_log', {
-        method: 'POST',
-        body: {
-          briefing_id: briefingId,
-          action: 'created',
-          actor_type: 'client',
-          ip_hash: privacyIpHash,
-          details: { protocol_code: protocolCode, company_name: companyName }
-        }
-      });
+      // Registro de Auditoria do Briefing:
+      // O evento 'created' é registrado automaticamente de forma confiável pelo Trigger do banco de dados (trg_orx_briefing_audit_created).
+      // Se SUPABASE_SERVICE_ROLE_KEY estiver disponível no ambiente de backend, registra log complementar de sistema:
+      if (SUPABASE_SERVICE_ROLE_KEY) {
+        await supabaseFetch('/rest/v1/orx_briefing_audit_log', {
+          method: 'POST',
+          useServiceRole: true,
+          body: {
+            briefing_id: briefingId,
+            action: 'created',
+            actor_type: 'system',
+            ip_hash: privacyIpHash,
+            details: { protocol_code: protocolCode, company_name: companyName }
+          }
+        });
+      }
 
       // Geração e Armazenamento do PDF Executivo Consolidado
       try {
@@ -1186,6 +1191,7 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       if (updatedItem && updatedItem.id) {
         await supabaseFetch('/rest/v1/orx_briefing_audit_log', {
           method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
           body: {
             briefing_id: updatedItem.id,
             action: 'status_changed',
@@ -1258,6 +1264,7 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       // Log de auditoria de download
       await supabaseFetch('/rest/v1/orx_briefing_audit_log', {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: {
           briefing_id: briefing.id,
           action: 'file_downloaded',
@@ -1325,6 +1332,7 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
       // Log de auditoria de visualização de PDF
       await supabaseFetch('/rest/v1/orx_briefing_audit_log', {
         method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
         body: {
           briefing_id: briefing.id,
           action: 'pdf_viewed',
