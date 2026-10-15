@@ -242,6 +242,8 @@ CREATE TRIGGER trg_orx_briefing_audit_created
     EXECUTE FUNCTION public.fn_orx_briefing_audit_created();
 
 -- E. Controle estrito de concessões (Grants/Revokes)
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT INSERT, SELECT ON public.orx_briefings TO anon, authenticated;
 REVOKE ALL ON public.orx_briefing_audit_log FROM anon, public;
 GRANT SELECT, INSERT ON public.orx_briefing_audit_log TO authenticated;
 

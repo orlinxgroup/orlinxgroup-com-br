@@ -8,8 +8,9 @@
   'use strict';
 
   const OFFICIAL_SUPABASE_URL = 'https://ulajrvkaqqedwuaiaksp.supabase.co';
+  const OFFICIAL_SUPABASE_ANON_KEY = 'sb_publishable_5OvenPLd8XALBaYN5YF25g_6VAx_MAk';
   const supabaseUrl = window.ORLINX_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
-  const supabaseAnonKey = window.ORLINX_SUPABASE_ANON_KEY || '';
+  const supabaseAnonKey = window.ORLINX_SUPABASE_ANON_KEY || OFFICIAL_SUPABASE_ANON_KEY;
 
   const TOTAL_STEPS = 10;
   let currentStep = 1;
@@ -768,16 +769,12 @@
               'apikey': supabaseAnonKey,
               'Authorization': `Bearer ${supabaseAnonKey}`,
               'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
+              'Prefer': 'return=minimal'
             },
             body: JSON.stringify(supabasePayload)
           });
 
           if (sbRes.ok || sbRes.status === 201) {
-            const inserted = await sbRes.json();
-            if (Array.isArray(inserted) && inserted[0] && inserted[0].protocol_code) {
-              finalProtocol = inserted[0].protocol_code;
-            }
             persisted = true;
           } else {
             const errBody = await sbRes.text().catch(() => '');
