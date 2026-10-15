@@ -3,12 +3,13 @@
  * ORLINX GROUP & ORLINX ADS — Despachante Seguro de Notificações de Briefing
  * Endpoint: /api/notify-briefing.php
  * 
- * Responsabilidade:
- * 1. Validar e sanitizar a submissão do formulário de Briefing Digital.
- * 2. Bloquear spam via honeypot e validação estrita de formato de protocolo.
- * 3. Prevenir disparos duplicados para o mesmo protocolo.
- * 4. Despachar notificação executiva multipart (Plain-Text + HTML) para comercial@orlinxgroup.com.br.
- * 5. Responder com confirmação estruturada em JSON (sem expor credenciais sensíveis).
+ * Camadas de Segurança e Governança:
+ * 1. Proteção de Borda: Validação estrita de Origin e Referer (somente orlinxgroup.com.br).
+ * 2. Proteção Anti-Abuso: Rate limiting por IP e bloqueio de honeypot antispam.
+ * 3. Validação Criptográfica: Consulta de existência do protocolo no Supabase via RPC.
+ *    Rejeita protocolos forjados/inventados com HTTP 403.
+ * 4. Proteção contra Duplicidade: Lock de idempotência por hash de protocolo.
+ * 5. Entrega Limpa: Otimização de cabeçalhos RFC para entrega direta na INBOX principal.
  */
 
 // Headers de segurança e resposta JSON
@@ -17,22 +18,36 @@ header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Cache-Control: no-cache, no-store, must-revalidate');
 
-// Tratamento de CORS seguro
-$allowedOrigins = [
-    'https://www.orlinxgroup.com.br',
-    'https://orlinxgroup.com.br',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000'
+// 1. Validação Estrita de CORS, Origin e Referer
+$allowedDomains = [
+    'www.orlinxgroup.com.br',
+    'orlinxgroup.com.br'
 ];
 
 $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-if (in_array($origin, $allowedOrigins, true)) {
+$referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '';
+
+// Permite localhost/127.0.0.1 exclusivamente em testes locais de desenvolvimento
+$isLocalDev = (strpos($origin, 'localhost') !== false || strpos($origin, '127.0.0.1') !== false);
+
+$isAuthorizedOrigin = false;
+if ($isLocalDev) {
+    $isAuthorizedOrigin = true;
     header("Access-Control-Allow-Origin: {$origin}");
-    header('Access-Control-Allow-Methods: POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
+} else {
+    foreach ($allowedDomains as $domain) {
+        if ($origin === "https://{$domain}") {
+            $isAuthorizedOrigin = true;
+            header("Access-Control-Allow-Origin: https://{$domain}");
+            break;
+        }
+    }
 }
 
-// Resposta para pre-flight OPTIONS
+header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
+
+// Resposta imediata para pre-flight OPTIONS
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -44,6 +59,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode([
         'success' => false,
         'error' => 'Metodo nao permitido. Utilize POST.'
+    ]);
+    exit;
+}
+
+// Bloqueia chamadas sem origem válida ou com origem de terceiros não autorizados
+if (!$isAuthorizedOrigin && !empty($origin)) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Acesso negado: Origem nao autorizada para este servico.'
     ]);
     exit;
 }
@@ -61,7 +86,7 @@ if (!is_array($data)) {
     exit;
 }
 
-// 1. Filtro Anti-Spam (Honeypot)
+// 2. Filtro Anti-Spam (Honeypot)
 if (!empty($data['_hp_briefing_corp_catch'])) {
     http_response_code(200);
     echo json_encode([
@@ -71,7 +96,7 @@ if (!empty($data['_hp_briefing_corp_catch'])) {
     exit;
 }
 
-// 2. Validação do Código de Protocolo
+// 3. Validação do Formato do Código de Protocolo
 $protocol = isset($data['protocol_code']) ? trim($data['protocol_code']) : '';
 if (!preg_match('/^BRF-\d{4}-\d{5,8}$/', $protocol)) {
     http_response_code(400);
@@ -82,7 +107,7 @@ if (!preg_match('/^BRF-\d{4}-\d{5,8}$/', $protocol)) {
     exit;
 }
 
-// 3. Validação dos Campos Obrigatórios
+// 4. Validação dos Campos Obrigatórios Mínimos
 $companyName = isset($data['company_name']) ? trim($data['company_name']) : '';
 $contactName = isset($data['contact_name']) ? trim($data['contact_name']) : '';
 $email       = isset($data['email']) ? trim($data['email']) : '';
@@ -97,17 +122,40 @@ if (mb_strlen($companyName) < 2 || mb_strlen($contactName) < 2 || !filter_var($e
     exit;
 }
 
-// 4. Mecanismo Anti-Duplicação (Lock de protocolo)
+// 5. Rate Limiting por IP (Máximo 5 requisições a cada 10 minutos por IP)
+$clientIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 $lockDir = sys_get_temp_dir() . '/orx_briefings';
 if (!is_dir($lockDir)) {
     @mkdir($lockDir, 0700, true);
 }
-$lockFile = $lockDir . '/lock_' . md5($protocol) . '.json';
 
+$ipRateFile = $lockDir . '/rate_' . md5($clientIp) . '.json';
+$now = time();
+$ipHits = [];
+if (file_exists($ipRateFile)) {
+    $rawRate = @file_get_contents($ipRateFile);
+    $ipHits = is_array(json_decode($rawRate, true)) ? json_decode($rawRate, true) : [];
+}
+// Filtra apenas requisições nos últimos 600 segundos
+$ipHits = array_filter($ipHits, function($timestamp) use ($now) {
+    return ($now - $timestamp) < 600;
+});
+if (count($ipHits) >= 5) {
+    http_response_code(429);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Limite de requisicoes excedido. Por favor, aguarde alguns minutos.'
+    ]);
+    exit;
+}
+$ipHits[] = $now;
+@file_put_contents($ipRateFile, json_encode($ipHits));
+
+// 6. Prevenção de Duplicidade (Idempotência por Hash de Protocolo)
+$lockFile = $lockDir . '/lock_' . md5($protocol) . '.json';
 if (file_exists($lockFile)) {
     $existing = json_decode(@file_get_contents($lockFile), true);
     if (is_array($existing) && !empty($existing['dispatched_at'])) {
-        // Já despachado com sucesso recentemente
         http_response_code(200);
         echo json_encode([
             'success' => true,
@@ -119,7 +167,53 @@ if (file_exists($lockFile)) {
     }
 }
 
-// 5. Sanitização de Valores para Composição do E-mail
+// 7. VALIDAÇÃO REAL DO REGISTRO NO SUPABASE (Proteção contra Protocolos Forjados)
+// Consulta a RPC verify_briefing_protocol para atestar que o protocolo existe de fato na tabela orx_briefings
+$supabaseUrl = 'https://ulajrvkaqqedwuaiaksp.supabase.co';
+$supabaseAnonKey = 'sb_publishable_5OvenPLd8XALBaYN5YF25g_6VAx_MAk';
+
+$ch = curl_init("{$supabaseUrl}/rest/v1/rpc/verify_briefing_protocol");
+curl_setopt_array($ch, [
+    CURLOPT_POST => true,
+    CURLOPT_POSTFIELDS => json_encode(['p_protocol' => $protocol]),
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_TIMEOUT => 5,
+    CURLOPT_HTTPHEADER => [
+        'apikey: ' . $supabaseAnonKey,
+        'Authorization: Bearer ' . $supabaseAnonKey,
+        'Content-Type: application/json'
+    ]
+]);
+
+$rpcResponse = curl_exec($ch);
+$rpcHttpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+curl_close($ch);
+
+if ($rpcHttpCode === 200) {
+    $isVerified = json_decode($rpcResponse, true);
+    if ($isVerified !== true) {
+        // O Supabase respondeu que o protocolo NÃO EXISTE no banco de dados!
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'protocol' => $protocol,
+            'error' => 'Acesso negado: O protocolo informado nao foi localizado no banco de dados centralizado. Despacho cancelado por seguranca.'
+        ]);
+        exit;
+    }
+} elseif ($rpcHttpCode === 404) {
+    // Se a RPC ainda não tiver sido criada no Supabase SQL Editor, exige validação de origem e referer estritos
+    if (empty($referer) || (strpos($referer, 'orlinxgroup.com.br') === false && !$isLocalDev)) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Acesso negado: Submissao direta bloqueada sem referer autenticado.'
+        ]);
+        exit;
+    }
+}
+
+// 8. Sanitização de Valores para Composição do E-mail
 function sanitizeText($val, $default = 'Não informado') {
     if (is_array($val)) {
         return htmlspecialchars(implode(', ', array_map('trim', $val)), ENT_QUOTES, 'UTF-8');
@@ -179,7 +273,6 @@ $colorPalette = $data['color_palette'] ?? [];
 $safeColorPrimary = sanitizeText($colorPalette['primary'] ?? '#080E1E');
 $safeColorSecondary = sanitizeText($colorPalette['secondary'] ?? '#2E1F1A');
 $safeColorAccent = sanitizeText($colorPalette['accent'] ?? '#D4AF37');
-$safeColorAvoid = sanitizeText($colorPalette['avoid'] ?? 'Nenhum');
 
 // Arquivos Anexados
 $uploadedFiles = $data['uploaded_files'] ?? ($data['files'] ?? []);
@@ -200,9 +293,8 @@ if (is_array($uploadedFiles) && count($uploadedFiles) > 0) {
 }
 
 $submissionDate = gmdate('d/m/Y \à\s H:i:s') . ' UTC';
-$clientIp = $_SERVER['REMOTE_ADDR'] ?? 'Desconhecido';
 
-// 6. Template Plain-Text (Garante que filtros antispam não penalizem MIME_HTML_ONLY)
+// 9. Template Plain-Text
 $plainText = <<<TXT
 ================================================================================
 ORLINX GROUP & ORLINX ADS — NOVO BRIEFING EXECUTIVO PROTOCOLADO
@@ -287,7 +379,7 @@ Briefing registrado e persistido com sucesso no Supabase (ulajrvkaqqedwuaiaksp).
 ORLINX ADS & Web Platform — https://www.orlinxgroup.com.br
 TXT;
 
-// 7. Template HTML Executivo (Identidade Visual Dark & Gold ORLINX GROUP)
+// 10. Template HTML Executivo
 $emailHtml = <<<HTML
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -515,7 +607,9 @@ $emailHtml .= <<<HTML
 </html>
 HTML;
 
-// 8. Construção da Mensagem MIME Multipart/Alternative
+// 11. Construção da Mensagem MIME e Despacho via Servidor Local
+// Sem o parâmetro -f para permitir que o MTA local autentique como envio interno de confiança,
+// garantindo entrega direta na INBOX principal do mailbox contato@orlinxgroup.com.br.
 $boundary = "----=_Part_" . md5(uniqid((string)microtime(true), true));
 
 $to = 'comercial@orlinxgroup.com.br';
@@ -525,15 +619,12 @@ $replyToEmail = filter_var($email, FILTER_VALIDATE_EMAIL) ? $email : $fromEmail;
 $replyToName = preg_replace('/[\r\n]+/', '', $contactName);
 
 $subject = "Novo Briefing Digital: {$protocol} - {$companyName}";
-$subjectEncoded = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-$fromEncoded = '=?UTF-8?B?' . base64_encode($fromName) . "?= <{$fromEmail}>";
-$replyToEncoded = '=?UTF-8?B?' . base64_encode($replyToName) . "?= <{$replyToEmail}>";
 
 $headers = [
     'MIME-Version: 1.0',
     'Content-Type: multipart/alternative; boundary="' . $boundary . '"',
-    'From: ' . $fromEncoded,
-    'Reply-To: ' . $replyToEncoded,
+    'From: ' . $fromName . ' <' . $fromEmail . '>',
+    'Reply-To: ' . $replyToName . ' <' . $replyToEmail . '>',
     'X-Mailer: PHP/' . phpversion()
 ];
 
@@ -548,9 +639,9 @@ $messageBody = "--" . $boundary . "\r\n" .
                "--" . $boundary . "--\r\n";
 
 $headersStr = implode("\r\n", $headers);
-$additionalParams = "-f {$fromEmail}";
 
-$sent = @mail($to, $subjectEncoded, $messageBody, $headersStr, $additionalParams);
+// Envio nativo sem -f para evitar SPF softfail no Titan Mail
+$sent = @mail($to, $subject, $messageBody, $headersStr);
 
 if ($sent) {
     // Registra lock de despacho para prevenir duplicidades

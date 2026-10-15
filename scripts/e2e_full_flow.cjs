@@ -112,6 +112,7 @@ async function main() {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
         'Origin': 'https://www.orlinxgroup.com.br',
+        'Referer': 'https://www.orlinxgroup.com.br/briefing',
         'Content-Length': Buffer.byteLength(notifyPostData)
       }
     }, (res) => {
