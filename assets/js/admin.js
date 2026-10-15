@@ -200,11 +200,30 @@
     async loadDashboardData() {
       try {
         // Carrega campanhas da API protegida
-        const campsRes = await fetch('/api/campaigns?all=true', {
-          headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
-        });
-        const campsData = await campsRes.json();
-        this.campaigns = campsData.campaigns || [];
+        let campsData = null;
+        try {
+          const campsRes = await fetch('/api/campaigns.php?all=true', {
+            headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+          });
+          if (campsRes.ok) campsData = await campsRes.json();
+        } catch (e) {}
+
+        if (!campsData) {
+          try {
+            const campsRes = await fetch('/api/campaigns?all=true', {
+              headers: this.token ? { 'Authorization': `Bearer ${this.token}` } : {}
+            });
+            if (campsRes.ok) campsData = await campsRes.json();
+          } catch (e) {}
+        }
+
+        if (campsData && Array.isArray(campsData.campaigns) && campsData.campaigns.length > 0) {
+          this.campaigns = campsData.campaigns;
+        } else if (window.OrlinxAds && Array.isArray(window.OrlinxAds.campaigns)) {
+          this.campaigns = window.OrlinxAds.campaigns;
+        } else {
+          this.campaigns = [];
+        }
 
         // Carrega pedidos da API protegida
         const ordersRes = await fetch('/api/orders', {

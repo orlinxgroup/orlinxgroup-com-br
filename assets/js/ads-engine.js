@@ -39,6 +39,21 @@
       target_url: '/anuncie.html',
       cta_text: 'Conhecer a Rede',
       status: 'active'
+    },
+    {
+      id: 'camp-tessari-verao',
+      campaign_code: 'CAMP-TESSARI-01',
+      client_name: 'Tessari Malhas',
+      title: 'Elegância que acompanha o verão',
+      category: 'Moda Praia e Piscina',
+      description: 'Descubra saias, shorts, vestidos e calças em tricô para momentos de sol com sofisticação e estilo.',
+      slot: 'feed-billboard',
+      banner_url: '/assets/ads/tessari/tessari_orlinx_ads_banner_1600x720.jpg',
+      target_url: 'https://www.tessarimalhas.com.br',
+      cta_text: 'Conheça a Coleção',
+      status: 'active',
+      start_date: '2026-10-15',
+      end_date: '2027-10-15'
     }
   ];
 
@@ -64,18 +79,32 @@
     }
 
     async fetchActiveCampaigns() {
+      // 1. Tenta endpoint PHP dedicado no servidor
       try {
-        // Consulta ao backend centralizado / Supabase
+        const res = await fetch('/api/campaigns.php');
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.campaigns) && data.campaigns.length > 0) {
+            this.campaigns = data.campaigns;
+            return;
+          }
+        }
+      } catch (err) {
+        // Fallback silencioso
+      }
+
+      // 2. Tenta endpoint limpo /api/campaigns
+      try {
         const res = await fetch('/api/campaigns');
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.campaigns) && data.campaigns.length > 0) {
             this.campaigns = data.campaigns;
+            return;
           }
         }
       } catch (err) {
-        // Em caso de offline, preserva os slots institucionais seguros sem quebrar o layout
-        console.warn('[ORLINX ADS] Sincronização centralizada:', err.message || err);
+        // Fallback para campanhas em memória
       }
     }
 
@@ -110,11 +139,17 @@
 
     getCampaignForSlot(slotName) {
       const active = this.campaigns.filter(c => c.slot === slotName && c.status === 'active');
-      if (active.length > 0) {
-        const randomIndex = Math.floor(Math.random() * active.length);
-        return active[randomIndex];
+      if (active.length === 0) return null;
+
+      // Preserva anunciantes contratados priorizando-os sobre placeholders institucionais vazios
+      const commercial = active.filter(c => c.id !== 'orx-slot-feed' && c.id !== 'orx-slot-topo' && c.id !== 'orx-slot-lateral');
+      if (commercial.length > 0) {
+        const randomIndex = Math.floor(Math.random() * commercial.length);
+        return commercial[randomIndex];
       }
-      return null;
+
+      const randomIndex = Math.floor(Math.random() * active.length);
+      return active[randomIndex];
     }
 
     renderBanner(container, campaign, slotName) {
@@ -133,24 +168,41 @@
 
       if (campaign.banner_url || campaign.bannerUrl) {
         const banner = campaign.banner_url || campaign.bannerUrl;
-        const target = campaign.target_url || campaign.targetUrl;
+        const target = this.sanitizeUrl(campaign.target_url || campaign.targetUrl);
         const title = campaign.title || 'Anúncio ORLINX ADS';
+        const clientName = campaign.client_name || campaign.clientName || 'ORLINX ADS';
+        const category = campaign.category || 'Publicidade Premium';
+        const description = campaign.description || '';
+        const cta = campaign.cta_text || campaign.ctaText || 'Conheça Mais';
 
         container.innerHTML = `
-          <div class="relative group overflow-hidden rounded-xl border border-[#4A332B] bg-[#0E1830] shadow-lg">
-            <div class="absolute top-2 right-2 z-10">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#080E1E]/85 text-[#D4AF37] border border-[#D4AF37]/40 backdrop-blur-sm">
+          <div class="relative group overflow-hidden rounded-2xl border border-[#4A332B] bg-[#0E1830] shadow-2xl transition-all duration-300 hover:border-[#D4AF37]/50">
+            <div class="absolute top-3 right-3 z-20">
+              <span class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-[#080E1E]/90 text-[#D4AF37] border border-[#D4AF37]/40 backdrop-blur-md shadow-md">
                 Publicidade &bull; ORLINX ADS
               </span>
             </div>
-            <a href="${this.escapeHtml(target)}" target="_blank" rel="noopener noreferrer" class="orx-ad-link block" data-campaign-id="${this.escapeHtml(campaign.id)}">
-              <img src="${this.escapeHtml(banner)}" alt="${this.escapeHtml(title)}" class="w-full h-auto object-cover transition-transform duration-300 group-hover:scale-[1.01]" loading="lazy">
+            <a href="${this.escapeHtml(target)}" target="_blank" rel="noopener noreferrer" class="orx-ad-link block overflow-hidden bg-[#14100D]" data-campaign-id="${this.escapeHtml(campaign.id)}" aria-label="${this.escapeHtml(title)}">
+              <img src="${this.escapeHtml(banner)}" alt="${this.escapeHtml(title)}" class="w-full h-auto aspect-[1600/720] object-cover transition-transform duration-500 group-hover:scale-[1.01]" loading="lazy">
             </a>
+            <div class="p-4 sm:p-5 bg-gradient-to-r from-[#14100D] via-[#1F1511] to-[#0E1830] border-t border-[#4A332B]/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div class="space-y-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30">${this.escapeHtml(category)}</span>
+                  <span class="text-xs text-[#D3CBC3] font-medium">${this.escapeHtml(clientName)}</span>
+                </div>
+                <h3 class="text-sm sm:text-base font-bold text-[#FDFBF7] font-space">${this.escapeHtml(title)}</h3>
+                ${description ? `<p class="text-xs text-[#D3CBC3]/80 max-w-2xl">${this.escapeHtml(description)}</p>` : ''}
+              </div>
+              <a href="${this.escapeHtml(target)}" target="_blank" rel="noopener noreferrer" class="orx-ad-link shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold btn-gold shadow-lg hover:shadow-xl transition-all" data-campaign-id="${this.escapeHtml(campaign.id)}">
+                ${this.escapeHtml(cta)} &rarr;
+              </a>
+            </div>
           </div>
         `;
       } else {
         const clientName = campaign.client_name || campaign.clientName || 'ORLINX GROUP';
-        const target = campaign.target_url || campaign.targetUrl || '/anuncie.html';
+        const target = this.sanitizeUrl(campaign.target_url || campaign.targetUrl || '/anuncie.html');
         const cta = campaign.cta_text || campaign.ctaText || 'Saiba Mais';
 
         container.innerHTML = `
@@ -174,12 +226,12 @@
         `;
       }
 
-      const link = container.querySelector('.orx-ad-link');
-      if (link) {
+      const links = container.querySelectorAll('.orx-ad-link');
+      links.forEach((link) => {
         link.addEventListener('click', () => {
           this.handleClick(campaign.id, slotName);
         });
-      }
+      });
     }
 
     handleClick(campaignId, slotName) {
@@ -194,18 +246,35 @@
 
     async sendTelemetry(campaignId, eventType, slotName) {
       try {
-        await fetch('/api/telemetry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            campaignId,
-            type: eventType,
-            slot: slotName
-          })
+        const payload = JSON.stringify({
+          campaignId,
+          type: eventType,
+          slot: slotName,
+          ts: Date.now()
         });
+
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/telemetry.php', payload);
+        } else {
+          await fetch('/api/telemetry.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true
+          });
+        }
       } catch (err) {
         // Silencioso em caso de falha transitória de rede
       }
+    }
+
+    sanitizeUrl(rawUrl) {
+      if (!rawUrl || typeof rawUrl !== 'string') return '#';
+      const trimmed = rawUrl.trim();
+      if (/^https:\/\/[a-zA-Z0-9\-._~:/?#[\]@!$&'()*+,;=]+$/i.test(trimmed) || trimmed.startsWith('/')) {
+        return trimmed;
+      }
+      return '#';
     }
 
     escapeHtml(str) {
