@@ -803,26 +803,10 @@
           modal.classList.remove('hidden');
         }
       } else {
-        // Contingência Segura: Garante atendimento ao cliente via canal oficial mesmo em caso de falha de conexão
-        try {
-          sessionStorage.removeItem('orx_briefing_draft');
-        } catch (_) {}
-
-        const modal = document.getElementById('briefing-success-modal');
-        const protocolDisplay = document.getElementById('modal-protocol-display');
-        if (protocolDisplay) {
-          protocolDisplay.innerText = finalProtocol;
-        }
-        if (modal) {
-          modal.classList.remove('hidden');
-        }
-
-        // Adiciona aviso de contingência caso a persistência direta não tenha sido confirmada
-        const statusSpan = document.querySelector('#briefing-success-modal .text-emerald-400');
-        if (statusSpan && persistError) {
-          statusSpan.innerHTML = `&#9888; Protocolo gerado com sucesso. Envie uma cópia para <a href="mailto:comercial@orlinxgroup.com.br?subject=Briefing%20${finalProtocol}" class="underline font-bold">comercial@orlinxgroup.com.br</a>.`;
-          statusSpan.className = 'text-[11px] text-amber-300 block mt-1';
-        }
+        // Regra Estrita de Governança: O protocolo de confirmação é emitido SOMENTE após persistência confirmada.
+        // Se houver falha, exibe mensagem clara ao usuário e preserva o rascunho.
+        const failureDetails = persistError ? ` (${persistError})` : '';
+        showAlert(`Falha de comunicação: Não foi possível confirmar a gravação do briefing no banco de dados centralizado${failureDetails}. Seus dados permanecem salvos com segurança neste navegador. Por favor, tente novamente ou contate nosso canal oficial: comercial@orlinxgroup.com.br.`);
       }
     } catch (err) {
       console.error('Erro na submissão do briefing:', err);
