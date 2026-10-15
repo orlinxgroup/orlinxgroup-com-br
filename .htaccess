@@ -1,0 +1,23 @@
+# ==============================================================================
+# ORLINX GROUP & ORLINX ADS — Configuração de Roteamento LiteSpeed / Apache
+# ==============================================================================
+
+RewriteEngine On
+
+# 1. Redirecionamento HTTPS forçado
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 2. Roteamento amigável de URLs limpas (sem extensão .html)
+# Permite acessar /briefing -> briefing.html, /anuncie -> anuncie.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L,QSA]
+
+# 3. Proteção e headers de segurança
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

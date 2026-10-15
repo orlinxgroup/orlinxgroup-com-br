@@ -34,3 +34,5 @@ data/
 # Backups & Deployment Archives
 backups/
 *.zip
+
+supabase/.temp/

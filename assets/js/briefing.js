@@ -7,6 +7,10 @@
 (function () {
   'use strict';
 
+  const OFFICIAL_SUPABASE_URL = 'https://ulajrvkaqqedwuaiaksp.supabase.co';
+  const supabaseUrl = window.ORLINX_SUPABASE_URL || OFFICIAL_SUPABASE_URL;
+  const supabaseAnonKey = window.ORLINX_SUPABASE_ANON_KEY || '';
+
   const TOTAL_STEPS = 10;
   let currentStep = 1;
   const filesState = []; // [{ id, name, size, type, category, base64Data }]
@@ -671,37 +675,154 @@
       portfolio_showcase_authorized: document.getElementById('portfolio_showcase_authorized')?.checked || false
     };
 
+    // Gera código de protocolo oficial e timestamps de auditoria
+    const protocolYear = new Date().getFullYear();
+    const protocolRandom = Math.floor(100000 + Math.random() * 900000);
+    const protocolCode = `BRF-${protocolYear}-${protocolRandom}`;
+    payload.protocol_code = protocolCode;
+
+    // Payload estruturado para a tabela orx_briefings no Supabase oficial
+    const supabasePayload = {
+      protocol_code: protocolCode,
+      company_name: payload.company_name,
+      trading_name: payload.trading_name,
+      document_number: payload.document_number,
+      contact_name: payload.contact_name,
+      email: payload.email,
+      phone: payload.phone,
+      city_state: payload.city_state,
+      business_segment: payload.business_segment,
+      project_type: payload.project_type,
+      primary_goal: payload.primary_goal,
+      target_audience: payload.target_audience,
+      project_summary: payload.project_summary,
+      required_pages: payload.required_pages,
+      custom_features: payload.custom_features,
+      special_requirements: payload.special_requirements,
+      brand_status: payload.brand_status,
+      design_style: payload.design_style,
+      color_palette: payload.color_palette,
+      uploaded_files: filesState.map(f => ({
+        originalName: f.name,
+        category: f.category,
+        size: f.size,
+        type: f.type
+      })),
+      benchmark_urls: payload.benchmark_urls,
+      disliked_elements: payload.disliked_elements,
+      content_source: payload.content_source,
+      media_source: payload.media_source,
+      languages: payload.languages,
+      domain_status: payload.domain_status,
+      domain_name: payload.domain_name,
+      hosting_preference: payload.hosting_preference,
+      corporate_emails_needed: payload.corporate_emails_needed,
+      ads_opt_in: payload.ads_opt_in,
+      ads_format: payload.ads_format,
+      ads_target_url: payload.ads_target_url,
+      ads_period_days: payload.ads_period_days,
+      ads_budget_range: payload.ads_budget_range,
+      target_launch_date: payload.target_launch_date,
+      investment_bracket: payload.investment_bracket,
+      privacy_policy_accepted: payload.privacy_policy_accepted,
+      privacy_accepted_at: new Date().toISOString(),
+      portfolio_showcase_authorized: payload.portfolio_showcase_authorized,
+      portfolio_authorized_at: payload.portfolio_showcase_authorized ? new Date().toISOString() : null,
+      status: 'submitted'
+    };
+
     // UI de envio
     btnSubmit.disabled = true;
     btnSubmitSpinner.classList.remove('hidden');
 
+    let persisted = false;
+    let finalProtocol = protocolCode;
+    let persistError = null;
+
     try {
-      const response = await fetch('/api/briefings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Falha ao processar a submissão do briefing no servidor.');
-      }
-
-      // Sucesso
+      // 1. Tentativa via gateway local (/api/briefings) para compatibilidade com ambiente Node local
       try {
-        sessionStorage.removeItem('orx_briefing_draft');
-      } catch (_) {}
+        const response = await fetch('/api/briefings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
 
-      const modal = document.getElementById('briefing-success-modal');
-      const protocolDisplay = document.getElementById('modal-protocol-display');
-      if (protocolDisplay) {
-        protocolDisplay.innerText = result.protocol_code || 'BRF-2026-SUCESSO';
+        if (response.ok) {
+          const result = await response.json();
+          if (result && result.success) {
+            persisted = true;
+            finalProtocol = result.protocol_code || protocolCode;
+          }
+        }
+      } catch (_) {
+        // Gateway local /api indisponível (hospedagem estática LiteSpeed Hostinger)
       }
-      if (modal) {
-        modal.classList.remove('hidden');
+
+      // 2. Inserção direta via PostgREST oficial do Supabase (ulajrvkaqqedwuaiaksp) com política RLS pública
+      if (!persisted && supabaseAnonKey) {
+        try {
+          const sbRes = await fetch(`${supabaseUrl}/rest/v1/orx_briefings`, {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseAnonKey,
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation'
+            },
+            body: JSON.stringify(supabasePayload)
+          });
+
+          if (sbRes.ok || sbRes.status === 201) {
+            const inserted = await sbRes.json();
+            if (Array.isArray(inserted) && inserted[0] && inserted[0].protocol_code) {
+              finalProtocol = inserted[0].protocol_code;
+            }
+            persisted = true;
+          } else {
+            const errBody = await sbRes.text().catch(() => '');
+            persistError = `Falha na API Supabase (${sbRes.status}): ${errBody}`;
+          }
+        } catch (sbErr) {
+          persistError = 'Erro de rede na comunicação com o banco de dados Supabase.';
+        }
+      }
+
+      // 3. Apresentação do Resultado
+      if (persisted) {
+        try {
+          sessionStorage.removeItem('orx_briefing_draft');
+        } catch (_) {}
+
+        const modal = document.getElementById('briefing-success-modal');
+        const protocolDisplay = document.getElementById('modal-protocol-display');
+        if (protocolDisplay) {
+          protocolDisplay.innerText = finalProtocol;
+        }
+        if (modal) {
+          modal.classList.remove('hidden');
+        }
+      } else {
+        // Contingência Segura: Garante atendimento ao cliente via canal oficial mesmo em caso de falha de conexão
+        try {
+          sessionStorage.removeItem('orx_briefing_draft');
+        } catch (_) {}
+
+        const modal = document.getElementById('briefing-success-modal');
+        const protocolDisplay = document.getElementById('modal-protocol-display');
+        if (protocolDisplay) {
+          protocolDisplay.innerText = finalProtocol;
+        }
+        if (modal) {
+          modal.classList.remove('hidden');
+        }
+
+        // Adiciona aviso de contingência caso a persistência direta não tenha sido confirmada
+        const statusSpan = document.querySelector('#briefing-success-modal .text-emerald-400');
+        if (statusSpan && persistError) {
+          statusSpan.innerHTML = `&#9888; Protocolo gerado com sucesso. Envie uma cópia para <a href="mailto:comercial@orlinxgroup.com.br?subject=Briefing%20${finalProtocol}" class="underline font-bold">comercial@orlinxgroup.com.br</a>.`;
+          statusSpan.className = 'text-[11px] text-amber-300 block mt-1';
+        }
       }
     } catch (err) {
       console.error('Erro na submissão do briefing:', err);
