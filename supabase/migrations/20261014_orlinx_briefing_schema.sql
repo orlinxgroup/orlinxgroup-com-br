@@ -7,6 +7,20 @@
 -- O público insere briefings exclusivamente com status 'submitted' e consentimento LGPD.
 -- Consulta e gestão restritas estritamente a administradores (public.is_admin()).
 -- ==============================================================================
+-- BACKUP AUTOMÁTICO PRÉVIO (NÃO-DESTRUTIVO)
+-- Se a tabela já existir com dados anteriores, cria um snapshot seguro antes da execução.
+-- ==============================================================================
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'orx_briefings') THEN
+        EXECUTE 'CREATE TABLE IF NOT EXISTS public.orx_briefings_pre_backup AS SELECT * FROM public.orx_briefings';
+        RAISE NOTICE 'Snapshot de segurança public.orx_briefings_pre_backup criado com sucesso.';
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'orx_briefing_audit_log') THEN
+        EXECUTE 'CREATE TABLE IF NOT EXISTS public.orx_briefing_audit_log_pre_backup AS SELECT * FROM public.orx_briefing_audit_log';
+        RAISE NOTICE 'Snapshot de segurança public.orx_briefing_audit_log_pre_backup criado com sucesso.';
+    END IF;
+END $$;
 
 -- 0. Pré-requisito de Dependência: Garante existência da tabela de administradores e função is_admin()
 -- Idempotente: se já criadas pela migração 20261008, preserva a estrutura; caso contrário, provisiona com segurança.
@@ -267,4 +281,11 @@ CREATE POLICY "Admins have full access to briefing files"
     TO authenticated
     USING (bucket_id = 'briefing-vault' AND public.is_admin())
     WITH CHECK (bucket_id = 'briefing-vault' AND public.is_admin());
+
+-- 8. Verificação de Integridade e Validação Imediata no SQL Editor
+SELECT 
+    'MIGRACAO_BRIEFING_CONCLUIDA' AS status,
+    (SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name IN ('orx_briefings', 'orx_briefing_audit_log', 'orx_admins')) AS tabelas_ativas,
+    (SELECT count(*) FROM storage.buckets WHERE id = 'briefing-vault') AS storage_vault_ativo;
+
 
