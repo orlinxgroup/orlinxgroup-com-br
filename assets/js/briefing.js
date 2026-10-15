@@ -790,7 +790,7 @@
         }
       }
 
-      // 3. Apresentação do Resultado
+      // 3. Apresentação do Resultado & Despacho da Notificação
       if (persisted) {
         try {
           sessionStorage.removeItem('orx_briefing_draft');
@@ -798,12 +798,61 @@
 
         const modal = document.getElementById('briefing-success-modal');
         const protocolDisplay = document.getElementById('modal-protocol-display');
+        const notificationStatus = document.getElementById('modal-notification-status');
+
         if (protocolDisplay) {
           protocolDisplay.innerText = finalProtocol;
         }
         if (modal) {
           modal.classList.remove('hidden');
         }
+
+        // 4. Despacho Real e Seguro da Notificação por E-mail (Serviço de Produção Hostinger)
+        if (notificationStatus) {
+          notificationStatus.className = 'text-[10px] text-[#D3CBC3] block animate-pulse';
+          notificationStatus.innerHTML = '&#8987; Transmitindo notifica&ccedil;&atilde;o para comercial@orlinxgroup.com.br...';
+        }
+
+        try {
+          payload.protocol_code = finalProtocol;
+
+          const notifyRes = await fetch('/api/notify-briefing.php', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (notifyRes.ok) {
+            const notifyData = await notifyRes.json().catch(() => null);
+            if (notifyData && notifyData.success) {
+              if (notificationStatus) {
+                notificationStatus.className = 'text-[10px] text-emerald-400 block';
+                notificationStatus.innerHTML = '&#10003; Notifica&ccedil;&atilde;o confirmada e enviada para comercial@orlinxgroup.com.br';
+              }
+              console.info('[ORLINX Briefing] Notificação por e-mail confirmada com sucesso:', notifyData);
+            } else {
+              if (notificationStatus) {
+                notificationStatus.className = 'text-[10px] text-[#D3CBC3] block';
+                notificationStatus.innerHTML = '&#9432; Protocolo registrado no banco centralizado. Em an&aacute;lise pela equipe comercial.';
+              }
+            }
+          } else {
+            console.warn('[ORLINX Briefing] Despachante retornou status HTTP:', notifyRes.status);
+            if (notificationStatus) {
+              notificationStatus.className = 'text-[10px] text-[#D3CBC3] block';
+              notificationStatus.innerHTML = '&#9432; Protocolo registrado no banco centralizado. Em an&aacute;lise pela equipe comercial.';
+            }
+          }
+        } catch (notifyErr) {
+          console.warn('[ORLINX Briefing] Erro na transmissão da notificação:', notifyErr);
+          if (notificationStatus) {
+            notificationStatus.className = 'text-[10px] text-[#D3CBC3] block';
+            notificationStatus.innerHTML = '&#9432; Protocolo registrado no banco centralizado. Em an&aacute;lise pela equipe comercial.';
+          }
+        }
+
       } else {
         // Regra Estrita de Governança: O protocolo de confirmação é emitido SOMENTE após persistência confirmada.
         // Se houver falha, exibe mensagem clara ao usuário e preserva o rascunho.
