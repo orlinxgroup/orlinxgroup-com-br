@@ -763,6 +763,7 @@
       // 2. Inserção direta via PostgREST oficial do Supabase (ulajrvkaqqedwuaiaksp) com política RLS pública
       if (!persisted && supabaseAnonKey) {
         try {
+          console.info('[ORLINX Briefing] Enviando payload ao Supabase PostgREST (Prefer: return=minimal)...');
           const sbRes = await fetch(`${supabaseUrl}/rest/v1/orx_briefings`, {
             method: 'POST',
             headers: {
@@ -774,14 +775,18 @@
             body: JSON.stringify(supabasePayload)
           });
 
-          if (sbRes.ok || sbRes.status === 201) {
+          console.info('[ORLINX Briefing] Resposta Supabase PostgREST:', sbRes.status, sbRes.statusText);
+
+          if (sbRes.status === 201 || (sbRes.status >= 200 && sbRes.status < 300)) {
             persisted = true;
           } else {
             const errBody = await sbRes.text().catch(() => '');
             persistError = `Falha na API Supabase (${sbRes.status}): ${errBody}`;
+            console.error('[ORLINX Briefing] Erro na resposta Supabase:', persistError);
           }
         } catch (sbErr) {
           persistError = 'Erro de rede na comunicação com o banco de dados Supabase.';
+          console.error('[ORLINX Briefing] Erro de rede:', sbErr);
         }
       }
 
