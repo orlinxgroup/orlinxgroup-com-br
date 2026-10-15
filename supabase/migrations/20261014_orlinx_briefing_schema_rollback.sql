@@ -14,6 +14,7 @@ BEGIN;
 REVOKE INSERT ON public.orx_briefings FROM anon;
 REVOKE ALL ON public.orx_briefing_audit_log FROM anon;
 DROP POLICY IF EXISTS "Public can submit briefing" ON public.orx_briefings;
+DROP POLICY IF EXISTS "Public can upload briefing files" ON storage.objects;
 
 -- 2. Remoção Segura de Triggers e Funções de Auditoria
 DROP TRIGGER IF EXISTS trg_orx_briefing_audit_created ON public.orx_briefings;

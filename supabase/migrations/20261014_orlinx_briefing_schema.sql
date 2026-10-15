@@ -8,6 +8,39 @@
 -- Consulta e gestão restritas estritamente a administradores (public.is_admin()).
 -- ==============================================================================
 
+-- 0. Pré-requisito de Dependência: Garante existência da tabela de administradores e função is_admin()
+-- Idempotente: se já criadas pela migração 20261008, preserva a estrutura; caso contrário, provisiona com segurança.
+CREATE TABLE IF NOT EXISTS public.orx_admins (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    full_name VARCHAR(255),
+    role VARCHAR(50) NOT NULL DEFAULT 'admin',
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public, auth, pg_temp
+AS $$
+    SELECT EXISTS (
+        SELECT 1
+        FROM public.orx_admins
+        WHERE user_id = auth.uid()
+          AND is_active = true
+          AND role = 'admin'
+    );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO service_role;
+
 -- 1. Tabela Principal de Briefings (orx_briefings)
 CREATE TABLE IF NOT EXISTS public.orx_briefings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -205,3 +238,33 @@ CREATE INDEX IF NOT EXISTS idx_orx_briefings_status ON public.orx_briefings(stat
 CREATE INDEX IF NOT EXISTS idx_orx_briefings_created_at ON public.orx_briefings(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_orx_briefings_email ON public.orx_briefings(email);
 CREATE INDEX IF NOT EXISTS idx_orx_briefing_audit_briefing_id ON public.orx_briefing_audit_log(briefing_id);
+
+-- 7. Cofre de Arquivos Privados no Supabase Storage (briefing-vault)
+-- Armazena logotipos e documentos diretamente no Storage S3 do Supabase (Zero dependência de disco efêmero na Hostinger)
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'briefing-vault',
+    'briefing-vault',
+    false, -- Estritamente PRIVADO (sem acesso público não-autenticado)
+    26214400, -- Limite estrito de 25MB por arquivo
+    ARRAY['image/png', 'image/jpeg', 'image/webp', 'image/svg+xml', 'application/pdf']
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- A. Inserção controlada: Permite upload de anexos para submissão de briefing
+DROP POLICY IF EXISTS "Public can upload briefing files" ON storage.objects;
+CREATE POLICY "Public can upload briefing files"
+    ON storage.objects
+    FOR INSERT
+    TO anon, authenticated
+    WITH CHECK (bucket_id = 'briefing-vault');
+
+-- B. Leitura e Gestão restritas EXCLUSIVAMENTE a Administradores Ativos
+DROP POLICY IF EXISTS "Admins have full access to briefing files" ON storage.objects;
+CREATE POLICY "Admins have full access to briefing files"
+    ON storage.objects
+    FOR ALL
+    TO authenticated
+    USING (bucket_id = 'briefing-vault' AND public.is_admin())
+    WITH CHECK (bucket_id = 'briefing-vault' AND public.is_admin());
+
