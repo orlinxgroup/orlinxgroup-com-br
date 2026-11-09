@@ -1,0 +1,9 @@
+{
+  "name": "orlinxgroup-com-br",
+  "private": true,
+  "scripts": {
+    "start": "node server.cjs",
+    "test:payments": "node --test tests/google_pay_test.cjs"
+  },
+  "dependencies": { "pg": "^8.23.1" }
+}

@@ -480,6 +480,11 @@
 
       modalContainer.appendChild(modalEl);
 
+      const paymentSlot = document.createElement('div');
+      paymentSlot.hidden = true;
+      modalEl.querySelector('#btn-conclude-modal').before(paymentSlot);
+      window.OrlinxGooglePay?.mount(paymentSlot, planInfo.price);
+
       const closeModal = () => modalEl.remove();
       modalEl.querySelector('#btn-close-modal')?.addEventListener('click', closeModal);
       modalEl.querySelector('#btn-conclude-modal')?.addEventListener('click', closeModal);

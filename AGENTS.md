@@ -19,6 +19,14 @@ Este repositório (`https://github.com/orlinxgroup/orlinxgroup-com-br`) é o amb
 
 ## 2. Princípios de Segurança e Governança de Acesso
 
+### Exceção autorizada — pagamentos (09/11/2026)
+
+Por instrução expressa do responsável, a nova integração de pagamentos utiliza Neon no projeto
+`solitary-scene-22116050`, com preparação no schema `orlinx_payments` da branch `dev-test`
+(`br-falling-heart-b6tx4els`). GitHub armazena código, testes e migrações; dados de pagamento ficam no Neon.
+A autorização não migra os dados ou a autenticação existentes, não libera recursos de outros projetos
+e não autoriza publicação em produção ou ativação de cobranças. As demais regras permanecem vigentes.
+
 1. **Gestão de Segredos:**
    - Nunca expor chaves privilegiadas (`service_role` ou senhas de banco) no código frontend, terminal, logs, histórico do chat ou commits no Git.
    - O frontend utiliza exclusivamente a chave pública anônima (`SUPABASE_ANON_KEY` / publishable key) protegida por **Row Level Security (RLS)**.

@@ -10,6 +10,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { googlePayConfig } = require('./lib/google_pay_config.cjs');
 const { generateBriefingPdf } = require('./lib/pdf_generator.cjs');
 
 const PORT = process.env.PORT || 3000;
@@ -357,6 +358,19 @@ const MIME_TYPES = {
 const server = http.createServer((req, res) => {
   const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
   const pathname = parsedUrl.pathname;
+
+  if (pathname === '/api/payments/google-pay/config') {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET');
+      res.writeHead(405);
+      res.end(JSON.stringify({ error: 'Method not allowed' }));
+      return;
+    }
+    res.end(JSON.stringify(googlePayConfig()));
+    return;
+  }
 
   // Headers de Segurança Base (OWASP)
   res.setHeader('X-Content-Type-Options', 'nosniff');
