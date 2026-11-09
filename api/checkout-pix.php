@@ -5,10 +5,11 @@
  * 
  * Políticas de Segurança e Conformidade:
  * 1. Valores fixados no servidor em centavos (não aceita valor do cliente).
- * 2. Autenticação via WOOVI_APP_ID / OPENPIX_APP_ID em variável de ambiente.
+ * 2. Autenticação via WOOVI_APP_ID / OPENPIX_APP_ID em variável de ambiente ou config.secret.php.
  * 3. Rate limiting estrito por IP.
  * 4. Prevenção de duplicidade e duplo clique (idempotência).
- * 5. Sanitização estrita de entradas (LGPD/OWASP).
+ * 5. Gravação atômica protegida contra acessos simultâneos (flock com backoff).
+ * 6. Sanitização estrita de entradas (LGPD/OWASP).
  */
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -115,7 +116,7 @@ if (count($hits) >= 10) {
 $hits[] = $now;
 @file_put_contents($rateFile, json_encode($hits));
 
-// Leitura do Payload
+// Leitura do Payload JSON
 $rawInput = file_get_contents('php://input');
 $input = json_decode($rawInput, true);
 if (!is_array($input)) {
@@ -177,8 +178,11 @@ if (file_exists($idemFile)) {
     }
 }
 
-// Obtenção da Credencial da Woovi (OpenPix)
-$appId = getenv('WOOVI_APP_ID') ?: getenv('OPENPIX_APP_ID');
+// Resolução Segura de Credenciais da Woovi (OpenPix)
+$appId = getenv('WOOVI_APP_ID') ?: ($_SERVER['WOOVI_APP_ID'] ?? ($_ENV['WOOVI_APP_ID'] ?? ''));
+if (empty($appId)) {
+    $appId = getenv('OPENPIX_APP_ID') ?: ($_SERVER['OPENPIX_APP_ID'] ?? ($_ENV['OPENPIX_APP_ID'] ?? ''));
+}
 $secretConfigFile = __DIR__ . '/config.secret.php';
 if (empty($appId) && file_exists($secretConfigFile)) {
     $secretCfg = @include $secretConfigFile;
@@ -187,14 +191,17 @@ if (empty($appId) && file_exists($secretConfigFile)) {
     }
 }
 
-// Bloqueio de Segurança Obrigatório: Se credencial ausente, interrompe e informa pendência sem vazar dados
-if (empty($appId)) {
+// Modo Sandbox/Mock apenas quando explicitamente habilitado em ambiente de teste
+$isTestMock = (getenv('WOOVI_MOCK_TEST') === 'true' || ($_SERVER['WOOVI_MOCK_TEST'] ?? '') === 'true');
+
+// Bloqueio de Segurança Obrigatório: Se credencial ausente e não for mock de teste, interrompe e informa pendência
+if (empty($appId) && !$isTestMock) {
     http_response_code(503);
     echo json_encode([
         'success' => false,
         'code' => 'WOOVI_CREDENTIALS_MISSING',
         'error' => 'A integração de cobrança Pix direta está temporariamente indisponível no servidor.',
-        'detail' => 'Configuração pendente: Variável de ambiente WOOVI_APP_ID não configurada no servidor.',
+        'detail' => 'Configuração pendente: WOOVI_APP_ID não configurada no servidor.',
         'commercial_action' => 'Por favor, solicite a contratação através do atendimento comercial ou aguarde a homologação da chave.',
         'commercial_email' => 'comercial@orlinxgroup.com.br'
     ]);
@@ -204,74 +211,82 @@ if (empty($appId)) {
 // Geração de Identificador Único do Pedido e CorrelationID
 $orderCode = 'ORX-' . mt_rand(100000, 999999);
 $correlationID = 'ORX_PIX_' . $orderCode . '_' . bin2hex(random_bytes(4));
-
-// Montagem do Payload para a API da Woovi
-// O VALOR É DEFINIDO EXCLUSIVAMENTE NO SERVIDOR EM CENTAVOS
-$wooviPayload = [
-    'correlationID' => $correlationID,
-    'value' => (int)$plan['amount_cents'],
-    'comment' => 'ORLINX ADS - ' . $plan['name'] . ' [' . $orderCode . ']',
-    'customer' => [
-        'name' => $companyName,
-        'email' => $email,
-        'phone' => $cleanPhone
-    ]
-];
-
-if (!empty($cleanDoc) && (strlen($cleanDoc) === 11 || strlen($cleanDoc) === 14)) {
-    $wooviPayload['customer']['taxID'] = $cleanDoc;
-}
-
-// Chamada à API Oficial da Woovi (OpenPix)
-$wooviEndpoint = 'https://api.woovi.com/api/v1/charge';
-$ch = curl_init($wooviEndpoint);
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($wooviPayload));
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/json; charset=UTF-8',
-    'Authorization: ' . $appId,
-    'User-Agent: ORLINX-ADS-Gateway/1.0'
-]);
-
-$responseBody = curl_exec($ch);
-$httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-$curlError = curl_error($ch);
-curl_close($ch);
-
-if ($responseBody === false || !empty($curlError)) {
-    http_response_code(502);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Falha de comunicação segura com a instituição financeira processadora do Pix.',
-        'detail' => $curlError ?: 'Tempo limite de resposta excedido'
-    ]);
-    exit;
-}
-
-$wooviResponse = json_decode($responseBody, true);
-
-if ($httpStatus < 200 || $httpStatus >= 300 || !is_array($wooviResponse)) {
-    http_response_code(502);
-    $errorMessage = $wooviResponse['error'] ?? ($wooviResponse['message'] ?? 'Erro desconhecido retornado pela API Pix.');
-    echo json_encode([
-        'success' => false,
-        'error' => 'A instituição financeira não autorizou a criação da cobrança Pix.',
-        'detail' => $errorMessage
-    ]);
-    exit;
-}
-
-$chargeData = $wooviResponse['charge'] ?? $wooviResponse;
-$brCode = $chargeData['brCode'] ?? ($wooviResponse['brCode'] ?? '');
-$qrCodeImage = $chargeData['qrCodeImage'] ?? ($wooviResponse['qrCodeImage'] ?? '');
-$pixChargeId = $chargeData['identifier'] ?? ($chargeData['correlationID'] ?? $correlationID);
-$expiresAt = gmdate('Y-m-d\TH:i:s\Z', time() + 86400); // 24h
-
-// Registro Persistente do Pedido no Cofre Local
 $createdAt = gmdate('Y-m-d\TH:i:s\Z');
+$expiresAt = gmdate('Y-m-d\TH:i:s\Z', time() + 86400); // 24 horas
+
+$brCode = '';
+$qrCodeImage = '';
+$pixChargeId = $correlationID;
+
+if ($isTestMock) {
+    $brCode = '00020101021226870014br.gov.bcb.pix2565pix.woovi.com/qr/v2/test_' . $correlationID . '5204000053039865405' . number_format($plan['amount_cents'] / 100, 2, '.', '') . '5802BR5916ORLINX GROUP6009SAO PAULO62070503***6304TEST';
+    $qrCodeImage = 'https://api.woovi.com/openpix/charge/brCode/image/' . $correlationID . '.png';
+} else {
+    // Montagem do Payload Oficial para a API da Woovi
+    // VALOR EXCLUSIVAMENTE DEFINIDO PELO SERVIDOR EM CENTAVOS
+    $wooviPayload = [
+        'correlationID' => $correlationID,
+        'value' => (int)$plan['amount_cents'],
+        'comment' => 'ORLINX ADS - ' . $plan['name'] . ' [' . $orderCode . ']',
+        'customer' => [
+            'name' => $companyName,
+            'email' => $email,
+            'phone' => $cleanPhone
+        ]
+    ];
+
+    if (!empty($cleanDoc) && (strlen($cleanDoc) === 11 || strlen($cleanDoc) === 14)) {
+        $wooviPayload['customer']['taxID'] = $cleanDoc;
+    }
+
+    $wooviEndpoint = 'https://api.woovi.com/api/v1/charge';
+    $ch = curl_init($wooviEndpoint);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($wooviPayload));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/json; charset=UTF-8',
+        'Authorization: ' . $appId,
+        'User-Agent: ORLINX-ADS-Gateway/1.0'
+    ]);
+
+    $responseBody = curl_exec($ch);
+    $httpStatus = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    curl_close($ch);
+
+    if ($responseBody === false || !empty($curlError)) {
+        http_response_code(502);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Falha de comunicação segura com a instituição financeira processadora do Pix.',
+            'detail' => $curlError ?: 'Tempo limite de resposta excedido'
+        ]);
+        exit;
+    }
+
+    $wooviResponse = json_decode($responseBody, true);
+
+    if ($httpStatus < 200 || $httpStatus >= 300 || !is_array($wooviResponse)) {
+        http_response_code(502);
+        $errorMessage = $wooviResponse['error'] ?? ($wooviResponse['message'] ?? 'Erro desconhecido retornado pela API Pix.');
+        echo json_encode([
+            'success' => false,
+            'error' => 'A instituição financeira não autorizou a criação da cobrança Pix.',
+            'detail' => $errorMessage
+        ]);
+        exit;
+    }
+
+    $chargeData = $wooviResponse['charge'] ?? $wooviResponse;
+    $brCode = $chargeData['brCode'] ?? ($wooviResponse['brCode'] ?? '');
+    $qrCodeImage = $chargeData['qrCodeImage'] ?? ($wooviResponse['qrCodeImage'] ?? '');
+    $pixChargeId = $chargeData['identifier'] ?? ($chargeData['correlationID'] ?? $correlationID);
+}
+
+// Registro Persistente do Pedido no Cofre Local com Gravação Atômica (flock com backoff)
 $newOrder = [
     'order_code' => $orderCode,
     'orderId' => $orderCode,
@@ -295,27 +310,47 @@ $newOrder = [
     'paid_at' => null
 ];
 
-// Gravação segura no arquivo de pedidos
 $fp = @fopen($dbFile, 'c+');
-if ($fp) {
-    if (flock($fp, LOCK_EX)) {
-        $content = '';
-        $fsize = filesize($dbFile);
-        if ($fsize > 0) {
-            $content = fread($fp, $fsize);
-        }
-        $orders = is_array(json_decode($content, true)) ? json_decode($content, true) : [];
-        $orders[] = $newOrder;
-        ftruncate($fp, 0);
-        rewind($fp);
-        fwrite($fp, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
-        fflush($fp);
-        flock($fp, LOCK_UN);
-    }
-    fclose($fp);
+if (!$fp) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Falha interna ao inicializar cofre de dados.']);
+    exit;
 }
 
-// Resposta Oficial ao Cliente (Sem expor segredos nem URLs privadas)
+$locked = false;
+$startLock = microtime(true);
+while ((microtime(true) - $startLock) < 3.0) {
+    if (flock($fp, LOCK_EX | LOCK_NB)) {
+        $locked = true;
+        break;
+    }
+    usleep(50000); // 50ms
+}
+
+if (!$locked) {
+    fclose($fp);
+    http_response_code(503);
+    echo json_encode(['success' => false, 'error' => 'Cofre ocupado por operação concorrente. Tente novamente.']);
+    exit;
+}
+
+rewind($fp);
+$content = '';
+$fsize = filesize($dbFile);
+if ($fsize > 0) {
+    $content = fread($fp, $fsize);
+}
+$orders = is_array(json_decode($content, true)) ? json_decode($content, true) : [];
+$orders[] = $newOrder;
+
+ftruncate($fp, 0);
+rewind($fp);
+fwrite($fp, json_encode($orders, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+fflush($fp);
+flock($fp, LOCK_UN);
+fclose($fp);
+
+// Resposta Oficial de Sucesso
 $clientResponse = [
     'success' => true,
     'order_code' => $orderCode,
@@ -330,7 +365,6 @@ $clientResponse = [
     'expires_at' => $expiresAt
 ];
 
-// Salva lock de idempotência
 @file_put_contents($idemFile, json_encode([
     'timestamp' => $now,
     'response' => $clientResponse

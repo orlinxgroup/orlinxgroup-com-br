@@ -878,10 +878,70 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         return;
       }
 
+      const isTestMock = process.env.WOOVI_MOCK_TEST === 'true';
+      const appId = process.env.WOOVI_APP_ID || process.env.OPENPIX_APP_ID;
       const charge = jsonBody.charge || (jsonBody.pix && jsonBody.pix.charge) || {};
-      const correlationID = (charge.correlationID || '').trim();
-      const chargeValueCents = parseInt(charge.value || (jsonBody.pix && jsonBody.pix.value) || 0, 10);
-      const pixTransactionId = charge.transactionID || (jsonBody.pix && jsonBody.pix.endToEndId) || charge.identifier || '';
+      let correlationID = (charge.correlationID || '').trim();
+      let chargeValueCents = parseInt(charge.value || (jsonBody.pix && jsonBody.pix.value) || 0, 10);
+      let pixTransactionId = charge.transactionID || (jsonBody.pix && jsonBody.pix.endToEndId) || charge.identifier || '';
+      let chargeStatus = (charge.status || '').toUpperCase();
+
+      if (!correlationID) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'correlationID ausente no payload.' }));
+        return;
+      }
+
+      // Consulta OBRIGATORIA da cobranca diretamente na API da Woovi quando em producao
+      if (!isTestMock) {
+        if (!appId) {
+          res.writeHead(503);
+          res.end(JSON.stringify({ success: false, error: 'Impossivel confirmar pagamento: WOOVI_APP_ID nao configurado no servidor.' }));
+          return;
+        }
+
+        try {
+          const https = require('https');
+          const verifyRes = await new Promise((resolve, reject) => {
+            const vReq = https.request({
+              hostname: 'api.woovi.com',
+              path: '/api/v1/charge/' + encodeURIComponent(correlationID),
+              method: 'GET',
+              headers: { 'Authorization': appId, 'Accept': 'application/json' },
+              timeout: 10000
+            }, r => {
+              let d = '';
+              r.on('data', c => d += c);
+              r.on('end', () => resolve({ statusCode: r.statusCode, body: d }));
+            });
+            vReq.on('error', reject);
+            vReq.on('timeout', () => { vReq.destroy(); reject(new Error('Timeout de consulta na API Woovi')); });
+            vReq.end();
+          });
+
+          if (verifyRes.statusCode !== 200) {
+            res.writeHead(502);
+            res.end(JSON.stringify({ success: false, error: 'Falha na verificacao de autenticidade junto a API Woovi.' }));
+            return;
+          }
+
+          const parsed = JSON.parse(verifyRes.body);
+          const vCharge = parsed.charge || parsed;
+          chargeStatus = (vCharge.status || '').toUpperCase();
+          chargeValueCents = parseInt(vCharge.value || chargeValueCents, 10);
+          pixTransactionId = vCharge.transactionID || vCharge.identifier || pixTransactionId;
+
+          if (chargeStatus !== 'COMPLETED') {
+            res.writeHead(422);
+            res.end(JSON.stringify({ success: false, error: 'Status retornado pela API da Woovi nao e COMPLETED.', provider_status: chargeStatus }));
+            return;
+          }
+        } catch (err) {
+          res.writeHead(502);
+          res.end(JSON.stringify({ success: false, error: 'Erro de comunicacao com a API oficial da Woovi: ' + err.message }));
+          return;
+        }
+      }
 
       if (!correlationID) {
         res.writeHead(400);

@@ -6,10 +6,10 @@
  * Regras Estritas de Segurança e Auditoria:
  * 1. Somente método POST com corpo JSON bruto.
  * 2. Validação do evento oficial OPENPIX:CHARGE_COMPLETED.
- * 3. Validação de autenticidade / verificação no provedor Woovi.
+ * 3. Validação de autenticidade: Consulta direta OBRIGATÓRIA na API da Woovi antes de marcar como PAGO.
  * 4. Idempotência estrita: impede duplo processamento.
  * 5. Conferência de valor, correlação e plano do pedido.
- * 6. Atualização atômica para status PAGO.
+ * 6. Gravação atômica protegida contra acessos simultâneos (flock com backoff).
  */
 
 header('Content-Type: application/json; charset=UTF-8');
@@ -18,11 +18,11 @@ header('X-Frame-Options: DENY');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['success' => false, 'error' => 'Método não permitido.']);
+    echo json_encode(['success' => false, 'error' => 'Método não permitido. Utilize POST.']);
     exit;
 }
 
-// Leitura do corpo bruto da requisição
+// 1. Leitura do corpo bruto da requisição
 $rawPayload = file_get_contents('php://input');
 if (empty($rawPayload)) {
     http_response_code(400);
@@ -37,10 +37,13 @@ if (!is_array($eventData)) {
     exit;
 }
 
-// Obtenção da Credencial da Woovi para verificação
-$appId = getenv('WOOVI_APP_ID') ?: getenv('OPENPIX_APP_ID');
+// 2. Resolução Segura de Credenciais da Woovi
+$appId = getenv('WOOVI_APP_ID') ?: ($_SERVER['WOOVI_APP_ID'] ?? ($_ENV['WOOVI_APP_ID'] ?? ''));
+if (empty($appId)) {
+    $appId = getenv('OPENPIX_APP_ID') ?: ($_SERVER['OPENPIX_APP_ID'] ?? ($_ENV['OPENPIX_APP_ID'] ?? ''));
+}
+$webhookSecret = getenv('WOOVI_WEBHOOK_SECRET') ?: ($_SERVER['WOOVI_WEBHOOK_SECRET'] ?? ($_ENV['WOOVI_WEBHOOK_SECRET'] ?? ''));
 $secretConfigFile = __DIR__ . '/config.secret.php';
-$webhookSecret = getenv('WOOVI_WEBHOOK_SECRET');
 if (file_exists($secretConfigFile)) {
     $secretCfg = @include $secretConfigFile;
     if (is_array($secretCfg)) {
@@ -53,7 +56,9 @@ if (file_exists($secretConfigFile)) {
     }
 }
 
-// 1. Verificação de Assinatura se configurado WOOVI_WEBHOOK_SECRET
+$isTestMock = (getenv('WOOVI_MOCK_TEST') === 'true' || ($_SERVER['WOOVI_MOCK_TEST'] ?? '') === 'true');
+
+// 3. Verificação de Assinatura HMAC-SHA256 (se configurado segredo de webhook)
 $signatureHeader = $_SERVER['HTTP_X_OPENPIX_SIGNATURE'] ?? $_SERVER['HTTP_X_WOOVI_SIGNATURE'] ?? '';
 if (!empty($webhookSecret) && !empty($signatureHeader)) {
     $expectedSignature = hash_hmac('sha256', $rawPayload, $webhookSecret);
@@ -64,18 +69,17 @@ if (!empty($webhookSecret) && !empty($signatureHeader)) {
     }
 }
 
-// 2. Extração do Evento e Dados da Cobrança
+// 4. Extração do Evento e Dados da Cobrança
 $eventName = $eventData['event'] ?? ($eventData['tipo'] ?? '');
 $charge = $eventData['charge'] ?? ($eventData['pix']['charge'] ?? null);
 
 // Aceita apenas o evento oficial de conclusão de cobrança
 if ($eventName !== 'OPENPIX:CHARGE_COMPLETED') {
-    // Retorna 200 para eventos informativos sem processar faturamento
     http_response_code(200);
     echo json_encode([
         'success' => true,
         'ignored' => true,
-        'message' => 'Evento não requer processamento de pagamento.',
+        'message' => 'Evento informativo recebido. Não requer alteração de status.',
         'event' => $eventName
     ]);
     exit;
@@ -98,31 +102,69 @@ if (empty($correlationID)) {
     exit;
 }
 
-// 3. Verificação de Autenticidade no Provedor (API Woovi) se chave configurada
-if (!empty($appId)) {
+// 5. CONSULTA OBRIGATÓRIA DA COBRANÇA DIRETAMENTE NA API DA WOOVI (Regra de Autenticidade)
+if (!$isTestMock) {
+    if (empty($appId)) {
+        http_response_code(503);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Impossível confirmar pagamento: WOOVI_APP_ID não configurado para verificação direta na API.',
+            'correlationID' => $correlationID
+        ]);
+        exit;
+    }
+
     $verifyUrl = 'https://api.woovi.com/api/v1/charge/' . urlencode($correlationID);
     $ch = curl_init($verifyUrl);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 6);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
         'Authorization: ' . $appId,
-        'Accept: application/json'
+        'Accept: application/json',
+        'User-Agent: ORLINX-ADS-Webhook-Validator/1.0'
     ]);
+
     $verifyRes = curl_exec($ch);
     $verifyHttp = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlErr = curl_error($ch);
     curl_close($ch);
 
-    if ($verifyHttp === 200 && $verifyRes) {
-        $verifiedCharge = json_decode($verifyRes, true);
-        $vCharge = $verifiedCharge['charge'] ?? $verifiedCharge;
-        if (is_array($vCharge)) {
-            $chargeStatus = strtoupper(trim((string)($vCharge['status'] ?? '')));
-            $chargeValueCents = (int)($vCharge['value'] ?? $chargeValueCents);
-        }
+    if ($verifyHttp !== 200 || empty($verifyRes)) {
+        http_response_code(502);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Falha na verificação de autenticidade da cobrança junto à API oficial da Woovi.',
+            'detail' => $curlErr ?: 'HTTP Status ' . $verifyHttp
+        ]);
+        exit;
+    }
+
+    $verifiedData = json_decode($verifyRes, true);
+    $vCharge = $verifiedData['charge'] ?? $verifiedData;
+    if (!is_array($vCharge)) {
+        http_response_code(502);
+        echo json_encode(['success' => false, 'error' => 'Resposta malformatada retornada pela API oficial da Woovi.']);
+        exit;
+    }
+
+    // Atualiza status e valor estritamente com os dados retornados pela API oficial
+    $chargeStatus = strtoupper(trim((string)($vCharge['status'] ?? '')));
+    $chargeValueCents = (int)($vCharge['value'] ?? $chargeValueCents);
+    $pixTransactionId = (string)($vCharge['transactionID'] ?? ($vCharge['identifier'] ?? $pixTransactionId));
+
+    if ($chargeStatus !== 'COMPLETED') {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'error' => 'A instituição financeira retornou status diferente de COMPLETED.',
+            'provider_status' => $chargeStatus
+        ]);
+        exit;
     }
 }
 
-// 4. Acesso ao Cofre de Pedidos Local
+// 6. Acesso Seguro ao Cofre de Pedidos com Bloqueio Atômico Concorrente (flock com backoff)
 $dataDir = __DIR__ . '/data';
 $dbFile = $dataDir . '/orders_database.json';
 
@@ -133,13 +175,30 @@ if (!file_exists($dbFile)) {
 }
 
 $fp = @fopen($dbFile, 'c+');
-if (!$fp || !flock($fp, LOCK_EX)) {
-    if ($fp) fclose($fp);
+if (!$fp) {
     http_response_code(503);
-    echo json_encode(['success' => false, 'error' => 'Cofre de dados ocupado. Tente novamente.']);
+    echo json_encode(['success' => false, 'error' => 'Falha ao acessar cofre de dados.']);
     exit;
 }
 
+$locked = false;
+$startLock = microtime(true);
+while ((microtime(true) - $startLock) < 3.0) {
+    if (flock($fp, LOCK_EX | LOCK_NB)) {
+        $locked = true;
+        break;
+    }
+    usleep(50000); // 50ms
+}
+
+if (!$locked) {
+    fclose($fp);
+    http_response_code(503);
+    echo json_encode(['success' => false, 'error' => 'Cofre ocupado por operação concorrente. Tente novamente.']);
+    exit;
+}
+
+rewind($fp);
 $rawDb = '';
 $fsize = filesize($dbFile);
 if ($fsize > 0) {
@@ -147,7 +206,7 @@ if ($fsize > 0) {
 }
 $orders = is_array(json_decode($rawDb, true)) ? json_decode($rawDb, true) : [];
 
-// 5. Localização do Pedido Correspondente
+// 7. Localização do Pedido Correspondente
 $matchedOrderIndex = -1;
 foreach ($orders as $idx => $order) {
     if (($order['correlationID'] ?? '') === $correlationID ||
@@ -168,7 +227,7 @@ if ($matchedOrderIndex === -1) {
 
 $targetOrder = &$orders[$matchedOrderIndex];
 
-// 6. Idempotência: Impedir reprocessamento se já estiver PAGO
+// 8. Idempotência: Impedir reprocessamento se já estiver PAGO
 if (strtoupper($targetOrder['status'] ?? '') === 'PAID') {
     flock($fp, LOCK_UN);
     fclose($fp);
@@ -182,7 +241,7 @@ if (strtoupper($targetOrder['status'] ?? '') === 'PAID') {
     exit;
 }
 
-// 7. Conferência Rigorosa de Valor Financeiro e Plano
+// 9. Conferência Rigorosa de Valor Financeiro e Plano
 $expectedCents = (int)($targetOrder['amount_cents'] ?? round(($targetOrder['amount'] ?? 0) * 100));
 if ($chargeValueCents > 0 && $chargeValueCents !== $expectedCents) {
     flock($fp, LOCK_UN);
@@ -197,7 +256,7 @@ if ($chargeValueCents > 0 && $chargeValueCents !== $expectedCents) {
     exit;
 }
 
-// 8. Atualização Atômica do Pedido para PAGO
+// 10. Atualização Atômica do Pedido para PAGO
 $paidAt = gmdate('Y-m-d\TH:i:s\Z');
 $targetOrder['status'] = 'PAID';
 $targetOrder['paid_at'] = $paidAt;
@@ -211,7 +270,7 @@ fflush($fp);
 flock($fp, LOCK_UN);
 fclose($fp);
 
-// 9. Resposta Oficial de Sucesso (HTTP 200)
+// 11. Resposta Oficial de Sucesso (HTTP 200)
 http_response_code(200);
 echo json_encode([
     'success' => true,
@@ -219,6 +278,6 @@ echo json_encode([
     'order_code' => $targetOrder['order_code'],
     'status' => 'PAID',
     'paid_at' => $paidAt,
-    'message' => 'Pagamento Pix confirmado com sucesso e pedido atualizado para PAGO.'
+    'message' => 'Pagamento Pix verificado diretamente na instituição financeira e confirmado com sucesso.'
 ]);
 exit;
