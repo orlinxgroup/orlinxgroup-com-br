@@ -36,3 +36,6 @@ backups/
 *.zip
 
 supabase/.temp/
+
+api/data/
+config.secret.php

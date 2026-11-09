@@ -373,6 +373,8 @@ const server = http.createServer((req, res) => {
   let safePath = pathname === '/' ? '/index.html' : pathname;
   if (safePath === '/briefing' || safePath === '/briefing/') {
     safePath = '/briefing.html';
+  } else if (!path.extname(safePath) && fs.existsSync(path.join(ROOT, safePath, 'index.html'))) {
+    safePath = path.join(safePath, 'index.html');
   } else if (!path.extname(safePath) && fs.existsSync(path.join(ROOT, safePath + '.html'))) {
     safePath = safePath + '.html';
   }
@@ -669,6 +671,325 @@ function handleApiRoute(req, res, pathname, parsedUrl) {
         status: 'pending_review',
         persisted: true,
         message: 'Solicitação protocolada com sucesso. Os dados comerciais e faturamento serão processados após homologação oficial da campanha.'
+      }));
+      return;
+    }
+
+
+    // --- 5.1. Checkout Pix via Woovi (/api/checkout-pix - POST) ---
+    if (pathname === '/api/checkout-pix' && req.method === 'POST') {
+      const PLAN_CATALOG = {
+        starter: { name: 'Plano Starter', amount_cents: 6990, slot: 'sidebar-box' },
+        business: { name: 'Plano Business', amount_cents: 14990, slot: 'feed-billboard' },
+        master: { name: 'Plano Master', amount_cents: 29990, slot: 'top-leaderboard' }
+      };
+
+      const planKey = (jsonBody.plan || jsonBody.plan_key || '').toString().toLowerCase().trim();
+      const plan = PLAN_CATALOG[planKey];
+      if (!plan) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'Plano selecionado inválido. Opções: Starter, Business, Master.' }));
+        return;
+      }
+
+      const companyName = sanitizeString((jsonBody.company_name || jsonBody.name || '').trim());
+      if (companyName.length < 3) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'Razão Social ou Nome deve conter no mínimo 3 caracteres.' }));
+        return;
+      }
+
+      const email = (jsonBody.email || '').trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'E-mail corporativo inválido.' }));
+        return;
+      }
+
+      const phone = (jsonBody.phone || '').toString().trim();
+      const cleanPhone = phone.replace(/\D/g, '');
+      if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'Telefone/WhatsApp deve conter DDD e no mínimo 10 dígitos.' }));
+        return;
+      }
+
+      const document = (jsonBody.document || jsonBody.taxID || '').toString().trim();
+      const cleanDoc = document.replace(/\D/g, '');
+
+      const appId = process.env.WOOVI_APP_ID || process.env.OPENPIX_APP_ID;
+      const isTestMock = process.env.WOOVI_MOCK_TEST === 'true';
+
+      if (!appId && !isTestMock) {
+        res.writeHead(503);
+        res.end(JSON.stringify({
+          success: false,
+          code: 'WOOVI_CREDENTIALS_MISSING',
+          error: 'A integração de cobrança Pix direta está temporariamente indisponível no servidor.',
+          detail: 'Configuração pendente: WOOVI_APP_ID não configurado no servidor.',
+          commercial_action: 'Solicite a contratação diretamente via atendimento comercial ou contate o suporte.',
+          commercial_email: 'comercial@orlinxgroup.com.br'
+        }));
+        return;
+      }
+
+      const orderCode = 'ORX-' + crypto.randomInt(100000, 999999);
+      const correlationID = 'ORX_PIX_' + orderCode + '_' + crypto.randomBytes(4).toString('hex');
+      const createdAt = new Date().toISOString();
+      const expiresAt = new Date(Date.now() + 86400000).toISOString();
+
+      let brCode = '';
+      let qrCodeImage = '';
+      let pixChargeId = correlationID;
+
+      if (isTestMock) {
+        brCode = '00020101021226870014br.gov.bcb.pix2565pix.woovi.com/qr/v2/test_' + correlationID + '5204000053039865405' + (plan.amount_cents / 100).toFixed(2) + '5802BR5916ORLINX GROUP6009SAO PAULO62070503***6304TEST';
+        qrCodeImage = 'https://api.woovi.com/openpix/charge/brCode/image/' + correlationID + '.png';
+      } else {
+        try {
+          const https = require('https');
+          const payload = JSON.stringify({
+            correlationID,
+            value: plan.amount_cents,
+            comment: `ORLINX ADS - ${plan.name} [${orderCode}]`,
+            customer: {
+              name: companyName,
+              email,
+              phone: cleanPhone,
+              ...(cleanDoc.length === 11 || cleanDoc.length === 14 ? { taxID: cleanDoc } : {})
+            }
+          });
+
+          const wooviRes = await new Promise((resolve, reject) => {
+            const reqPost = https.request({
+              hostname: 'api.woovi.com',
+              path: '/api/v1/charge',
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': appId,
+                'Content-Length': Buffer.byteLength(payload)
+              },
+              timeout: 15000
+            }, (resp) => {
+              let data = '';
+              resp.on('data', chunk => data += chunk);
+              resp.on('end', () => resolve({ statusCode: resp.statusCode, body: data }));
+            });
+            reqPost.on('error', reject);
+            reqPost.on('timeout', () => { reqPost.destroy(); reject(new Error('Timeout de comunicação com a Woovi')); });
+            reqPost.write(payload);
+            reqPost.end();
+          });
+
+          const parsed = JSON.parse(wooviRes.body);
+          if (wooviRes.statusCode >= 200 && wooviRes.statusCode < 300) {
+            const charge = parsed.charge || parsed;
+            brCode = charge.brCode || parsed.brCode || '';
+            qrCodeImage = charge.qrCodeImage || parsed.qrCodeImage || '';
+            pixChargeId = charge.identifier || charge.correlationID || correlationID;
+          } else {
+            res.writeHead(502);
+            res.end(JSON.stringify({
+              success: false,
+              error: 'Instituição financeira não autorizou a criação da cobrança Pix.',
+              detail: parsed.error || parsed.message || 'Erro retornado pela API Pix.'
+            }));
+            return;
+          }
+        } catch (err) {
+          res.writeHead(502);
+          res.end(JSON.stringify({ success: false, error: 'Falha de comunicação segura com o provedor Pix.', detail: err.message }));
+          return;
+        }
+      }
+
+      // Persistência local em api/data/orders_database.json
+      const dataDir = path.join(ROOT, 'api', 'data');
+      if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+      const ordersFile = path.join(dataDir, 'orders_database.json');
+      let orders = [];
+      try {
+        if (fs.existsSync(ordersFile)) orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8')) || [];
+      } catch (_) {}
+
+      const newOrder = {
+        order_code: orderCode,
+        orderId: orderCode,
+        correlationID,
+        pix_charge_id: pixChargeId,
+        company_name: companyName,
+        email,
+        phone,
+        document,
+        plan_key: planKey,
+        plan_name: plan.name,
+        amount_cents: plan.amount_cents,
+        amount: Math.round(plan.amount_cents) / 100,
+        slot: plan.slot,
+        status: 'PENDING_PAYMENT',
+        payment_method: 'PIX_WOOVI',
+        br_code: brCode,
+        qr_code_image: qrCodeImage,
+        expires_at: expiresAt,
+        created_at: createdAt,
+        paid_at: null
+      };
+
+      orders.push(newOrder);
+      fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2), 'utf8');
+
+      res.writeHead(201);
+      res.end(JSON.stringify({
+        success: true,
+        order_code: orderCode,
+        correlationID,
+        plan_name: plan.name,
+        amount_cents: plan.amount_cents,
+        amount: Math.round(plan.amount_cents) / 100,
+        amount_formatted: 'R$ ' + (plan.amount_cents / 100).toFixed(2).replace('.', ','),
+        brCode,
+        qrCodeImage,
+        status: 'PENDING_PAYMENT',
+        expires_at: expiresAt
+      }));
+      return;
+    }
+
+    // --- 5.2. Webhook Woovi Pix (/api/webhook-woovi - POST) ---
+    if (pathname === '/api/webhook-woovi' && req.method === 'POST') {
+      const webhookSecret = process.env.WOOVI_WEBHOOK_SECRET;
+      const signatureHeader = req.headers['x-openpix-signature'] || req.headers['x-woovi-signature'];
+
+      if (webhookSecret && signatureHeader) {
+        const expected = crypto.createHmac('sha256', webhookSecret).update(body).digest('hex');
+        if (expected !== signatureHeader) {
+          res.writeHead(401);
+          res.end(JSON.stringify({ success: false, error: 'Assinatura de webhook inválida.' }));
+          return;
+        }
+      }
+
+      const eventName = jsonBody.event || jsonBody.tipo || '';
+      if (eventName !== 'OPENPIX:CHARGE_COMPLETED') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: true, ignored: true, message: 'Evento ignorado.', event: eventName }));
+        return;
+      }
+
+      const charge = jsonBody.charge || (jsonBody.pix && jsonBody.pix.charge) || {};
+      const correlationID = (charge.correlationID || '').trim();
+      const chargeValueCents = parseInt(charge.value || (jsonBody.pix && jsonBody.pix.value) || 0, 10);
+      const pixTransactionId = charge.transactionID || (jsonBody.pix && jsonBody.pix.endToEndId) || charge.identifier || '';
+
+      if (!correlationID) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'correlationID ausente no payload.' }));
+        return;
+      }
+
+      const ordersFile = path.join(ROOT, 'api', 'data', 'orders_database.json');
+      let orders = [];
+      try {
+        if (fs.existsSync(ordersFile)) orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8')) || [];
+      } catch (_) {}
+
+      const idx = orders.findIndex(o => 
+        o.correlationID === correlationID || 
+        o.pix_charge_id === correlationID || 
+        (o.order_code && correlationID.includes(o.order_code))
+      );
+
+      if (idx === -1) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ success: false, error: 'Pedido não localizado para correlationID: ' + correlationID }));
+        return;
+      }
+
+      const target = orders[idx];
+
+      // Idempotência
+      if ((target.status || '').toUpperCase() === 'PAID') {
+        res.writeHead(200);
+        res.end(JSON.stringify({ success: true, already_processed: true, order_code: target.order_code }));
+        return;
+      }
+
+      // Conferência de valor estrito
+      const expectedCents = target.amount_cents || Math.round((target.amount || 0) * 100);
+      if (chargeValueCents > 0 && chargeValueCents !== expectedCents) {
+        res.writeHead(422);
+        res.end(JSON.stringify({
+          success: false,
+          error: 'Divergência de valor financeiro detectada.',
+          expected_cents: expectedCents,
+          received_cents: chargeValueCents
+        }));
+        return;
+      }
+
+      target.status = 'PAID';
+      target.paid_at = new Date().toISOString();
+      target.pix_transaction_id = pixTransactionId;
+
+      fs.writeFileSync(ordersFile, JSON.stringify(orders, null, 2), 'utf8');
+
+      res.writeHead(200);
+      res.end(JSON.stringify({
+        success: true,
+        processed: true,
+        order_code: target.order_code,
+        status: 'PAID',
+        paid_at: target.paid_at
+      }));
+      return;
+    }
+
+    // --- 5.3. Consulta Pública de Pedido (/api/check-order - GET) ---
+    if (pathname === '/api/check-order' && req.method === 'GET') {
+      const orderCode = (parsedUrl.searchParams.get('order_code') || parsedUrl.searchParams.get('code') || '').trim();
+      const correlationID = (parsedUrl.searchParams.get('correlationID') || '').trim();
+
+      if (!orderCode && !correlationID) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ success: false, error: 'Parâmetro order_code ou correlationID obrigatório.' }));
+        return;
+      }
+
+      const ordersFile = path.join(ROOT, 'api', 'data', 'orders_database.json');
+      let orders = [];
+      try {
+        if (fs.existsSync(ordersFile)) orders = JSON.parse(fs.readFileSync(ordersFile, 'utf8')) || [];
+      } catch (_) {}
+
+      const found = orders.find(o => 
+        (orderCode && o.order_code === orderCode) ||
+        (correlationID && o.correlationID === correlationID)
+      );
+
+      if (!found) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ success: false, status: 'NOT_FOUND', error: 'Pedido não encontrado.' }));
+        return;
+      }
+
+      let status = found.status || 'PENDING_PAYMENT';
+      if (status === 'PENDING_PAYMENT' && found.expires_at) {
+        if (Date.now() > new Date(found.expires_at).getTime()) {
+          status = 'EXPIRED';
+        }
+      }
+
+      res.writeHead(200);
+      res.end(JSON.stringify({
+        success: true,
+        order_code: found.order_code,
+        status,
+        plan_name: found.plan_name || '',
+        amount: found.amount || 0,
+        paid_at: found.paid_at || null,
+        expires_at: found.expires_at || null
       }));
       return;
     }
